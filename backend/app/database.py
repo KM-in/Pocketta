@@ -28,8 +28,7 @@ class Database:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as connection:
             connection.execute("PRAGMA journal_mode = WAL")
-            connection.execute(
-                """
+            connection.execute("""
                 CREATE TABLE IF NOT EXISTS lectures (
                     id TEXT PRIMARY KEY,
                     original_filename TEXT NOT NULL,
@@ -41,8 +40,7 @@ class Database:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
-                """
-            )
+                """)
             columns = {
                 row["name"]
                 for row in connection.execute("PRAGMA table_info(lectures)").fetchall()
@@ -65,10 +63,16 @@ class Database:
             )
 
     def create_lecture(
-        self, lecture_id: str, filename: str, source_path: Path, title: str | None = None
+        self,
+        lecture_id: str,
+        filename: str,
+        source_path: Path,
+        title: str | None = None,
     ) -> None:
         now = datetime.now(UTC).isoformat()
-        display_title = title.strip() if title and title.strip() else Path(filename).stem
+        display_title = (
+            title.strip() if title and title.strip() else Path(filename).stem
+        )
         with self._connect() as connection:
             connection.execute(
                 """INSERT INTO lectures
@@ -130,7 +134,11 @@ class Database:
         with self._connect() as connection:
             connection.execute(
                 "UPDATE lectures SET transcript_json = ?, updated_at = ? WHERE id = ?",
-                (transcript.model_dump_json(), datetime.now(UTC).isoformat(), lecture_id),
+                (
+                    transcript.model_dump_json(),
+                    datetime.now(UTC).isoformat(),
+                    lecture_id,
+                ),
             )
 
     def replace_transcript_and_invalidate_pack(
@@ -162,7 +170,11 @@ class Database:
         with self._connect() as connection:
             connection.execute(
                 "UPDATE lectures SET study_pack_json = ?, updated_at = ? WHERE id = ?",
-                (study_pack.model_dump_json(), datetime.now(UTC).isoformat(), lecture_id),
+                (
+                    study_pack.model_dump_json(),
+                    datetime.now(UTC).isoformat(),
+                    lecture_id,
+                ),
             )
 
     def get_source_path(self, lecture_id: str) -> Path | None:
@@ -195,12 +207,16 @@ class Database:
             return None
         return LectureDetail(
             **self._summary(row).model_dump(),
-            transcript=Transcript.model_validate_json(row["transcript_json"])
-            if row["transcript_json"]
-            else None,
-            study_pack=StudyPack.model_validate_json(row["study_pack_json"])
-            if row["study_pack_json"]
-            else None,
+            transcript=(
+                Transcript.model_validate_json(row["transcript_json"])
+                if row["transcript_json"]
+                else None
+            ),
+            study_pack=(
+                StudyPack.model_validate_json(row["study_pack_json"])
+                if row["study_pack_json"]
+                else None
+            ),
         )
 
     def recover_incomplete(self) -> list[str]:
@@ -234,7 +250,16 @@ class Database:
 
     def delete(self, lecture_id: str) -> bool:
         with self._connect() as connection:
-            cursor = connection.execute("DELETE FROM lectures WHERE id = ?", (lecture_id,))
+            if connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE name='sources'"
+            ).fetchone():
+                connection.execute(
+                    "DELETE FROM model_runs WHERE source_id = ?", (lecture_id,)
+                )
+                connection.execute("DELETE FROM sources WHERE id = ?", (lecture_id,))
+            cursor = connection.execute(
+                "DELETE FROM lectures WHERE id = ?", (lecture_id,)
+            )
             return cursor.rowcount > 0
 
     @staticmethod
@@ -246,9 +271,11 @@ class Database:
             status=row["status"],
             progress=row["progress"] or 0,
             message=row["message"] or "",
-            metrics=ProcessingMetrics.model_validate_json(row["metrics_json"])
-            if row["metrics_json"]
-            else ProcessingMetrics(),
+            metrics=(
+                ProcessingMetrics.model_validate_json(row["metrics_json"])
+                if row["metrics_json"]
+                else ProcessingMetrics()
+            ),
             error=row["error"],
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),

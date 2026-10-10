@@ -15,6 +15,13 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
+    model_provider: Literal["lm_studio", "cerebras"] = "lm_studio"
+    cerebras_api_key: str = ""
+    cerebras_text_model: str = "qwen-3.8-27b"
+    cerebras_vision_model: str = "qwen-3.8-27b"
+    libreoffice_path: str = "soffice"
+    max_document_pages: int = 500
+
     pocketta_data_dir: Path = Path("./data")
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"

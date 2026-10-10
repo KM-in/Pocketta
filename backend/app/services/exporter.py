@@ -3,11 +3,13 @@ from __future__ import annotations
 from ..models import LectureDetail
 
 
-def render_markdown(lecture: LectureDetail) -> str:
+def render_markdown(lecture: LectureDetail, model_provider: str = "lm_studio") -> str:
     if not lecture.transcript or not lecture.study_pack:
         raise ValueError("Lecture is not ready for export")
     pack = lecture.study_pack
-    uncertain = [segment for segment in lecture.transcript.segments if segment.uncertain]
+    uncertain = [
+        segment for segment in lecture.transcript.segments if segment.uncertain
+    ]
     lines = [
         f"# {_escape_inline(lecture.title)}",
         "",
@@ -16,7 +18,11 @@ def render_markdown(lecture: LectureDetail) -> str:
         f"- **Source file:** {_escape_inline(lecture.original_filename)}",
         f"- **Duration:** {_duration(lecture.transcript.duration_ms)}",
         f"- **Created:** {lecture.created_at.isoformat()}",
-        "- **Processing:** Generated locally with PocketTA; no cloud AI is required.",
+        (
+            "- **Processing:** Generated with Cerebras cloud processing; recording transcription runs locally."
+            if model_provider == "cerebras"
+            else "- **Processing:** Generated locally with PocketTA; no cloud AI is required."
+        ),
         "",
         "## Summary",
         "",
@@ -29,9 +35,7 @@ def render_markdown(lecture: LectureDetail) -> str:
         lines.append(
             f"{len(uncertain)} transcript segment(s) were marked uncertain and excluded "
             "from evidence for confident study material: "
-            + ", ".join(
-                f"[{segment.id}](#{segment.id})" for segment in uncertain
-            )
+            + ", ".join(f"[{segment.id}](#{segment.id})" for segment in uncertain)
         )
     else:
         lines.append("No transcript segments were marked uncertain.")
@@ -70,9 +74,17 @@ def render_markdown(lecture: LectureDetail) -> str:
     for index, question in enumerate(pack.quiz, start=1):
         lines.extend([f"### {index}. {question.question}", ""])
         for option_index, option in enumerate(question.options):
-            lines.append(f"- {'**' if option_index == question.correct_answer else ''}{option}{'**' if option_index == question.correct_answer else ''}")
+            lines.append(
+                f"- {'**' if option_index == question.correct_answer else ''}{option}{'**' if option_index == question.correct_answer else ''}"
+            )
         lines.extend(
-            ["", f"**Explanation:** {question.explanation}", "", _evidence(question.segment_ids), ""]
+            [
+                "",
+                f"**Explanation:** {question.explanation}",
+                "",
+                _evidence(question.segment_ids),
+                "",
+            ]
         )
     lines.extend(["## Transcript", ""])
     for segment in lecture.transcript.segments:
