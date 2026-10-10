@@ -1,8 +1,17 @@
-# PocketTA Local
+# PocketTA
 
-PocketTA Local turns lecture recordings into private, offline transcripts and evidence-linked study material on a student's laptop. FastAPI, SQLite, whisper.cpp, LM Studio, and React all run locally; the app binds only to loopback addresses.
+PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, extracts citable content, and generates source-level study packs. React, FastAPI, SQLite, and recording transcription run locally. Select Cerebras for cloud text and vision processing, or LM Studio for local text generation. The application binds to loopback addresses.
 
 ## What works
+
+- Create and edit courses; collect recordings, PDFs, and PPTX slides within each course.
+- Extract native document text, render previews, and selectively analyse scans or visual pages with Cerebras. Cache rendered pages and vision results across retries.
+- Generate source-level study packs with validated content-unit IDs resolved to page, slide, or timestamp citations.
+- Retry/cancel processing, restore interrupted work, and preserve existing recordings under an Imported lectures course.
+
+See [Course setup and API](docs/COURSES.md) for the new workflow and its boundaries.
+
+The existing recording workflow also supports:
 
 - Upload WAV, MP3, M4A, or MP4 recordings up to 200 MB.
 - Normalize with FFmpeg and transcribe English locally with whisper.cpp.
@@ -13,7 +22,7 @@ PocketTA Local turns lecture recordings into private, offline transcripts and ev
 - Show coarse persisted progress, stage timings, observed system-memory use, browser connectivity, and local runtime readiness.
 - Start an attributed built-in demo and use the browser print dialog for PDF output.
 
-The hackathon build intentionally omits chat, diarisation, accounts, cloud sync, semantic search, and native packaging.
+This build omits unified course revision packs, tutor chat, adaptive assessments/mastery dashboards, diarisation, accounts, cloud sync, semantic search, and native packaging.
 
 ## Prerequisites
 
@@ -22,9 +31,10 @@ The hackathon build intentionally omits chat, diarisation, accounts, cloud sync,
 - FFmpeg and FFprobe on `PATH`
 - A locally built whisper.cpp CLI and `ggml-base.en.bin`
 - Optional for NVIDIA GPUs: Faster Whisper, CUDA cuBLAS/cuDNN runtime libraries, and a prepared `turbo` model
-- LM Studio with the Qwen 3.5 4B model already downloaded
+- A Cerebras API key for cloud generation and document vision, or LM Studio with Qwen 3.5 4B for local text generation
+- LibreOffice for PPTX rendering; PDF processing uses the Python dependencies
 
-Normal app startup, health checks, and lecture processing never download a model. Prepare native tools and models while online, then use the complete workflow without Wi-Fi.
+Normal app startup, health checks, and lecture processing never download a model. Prepare native tools and models while online, then use the local recording workflow without Wi-Fi.
 
 ## Clean project setup
 
@@ -42,7 +52,7 @@ Windows PowerShell:
 ./scripts/bootstrap.ps1 -Clean
 ```
 
-Copy `.env.example` to `.env`. In LM Studio, load Qwen with a context length of at least 16K and start the local server on `127.0.0.1:1234`. Obtain the exact identifier from:
+Copy `.env.example` to `.env`. For cloud mode, set `MODEL_PROVIDER=cerebras` and `CEREBRAS_API_KEY`; configure `LIBREOFFICE_PATH` for slides. For local text mode, set `MODEL_PROVIDER=lm_studio`. In LM Studio, load Qwen with a context length of at least 16K and start the local server on `127.0.0.1:1234`. Obtain the exact identifier from:
 
 ```bash
 curl http://127.0.0.1:1234/v1/models
@@ -62,7 +72,7 @@ Install the NVIDIA CUDA libraries required by Faster Whisper for your OS, then p
 .venv/bin/python -m backend.app.tools.prepare_faster_whisper
 ```
 
-With `TRANSCRIPTION_BACKEND=auto`, PocketTA uses Faster Whisper when CUDA and the prepared model are ready, and otherwise falls back to whisper.cpp.
+Recording transcription remains local in either model mode. With `TRANSCRIPTION_BACKEND=auto`, PocketTA uses Faster Whisper when CUDA and the prepared model are ready, and otherwise falls back to whisper.cpp.
 
 ## Run
 
@@ -96,7 +106,7 @@ See [docs/README.md](docs/README.md) for native setup, cross-platform notes, and
 
 ## Benchmark a prepared machine
 
-With FastAPI and LM Studio running:
+For the historical local recording benchmark, with `MODEL_PROVIDER=lm_studio`, FastAPI, and LM Studio running:
 
 ```bash
 mkdir -p benchmark-results
@@ -113,9 +123,9 @@ The bundled 2.5-minute demo completed a post-hardening local run in 88.4 seconds
 
 ## Privacy and limitations
 
-PocketTA binds to loopback addresses, restricts the LM Studio URL to loopback, ignores proxy environment variables for model calls, and contains no analytics, CDN assets, cloud AI, accounts, or model downloader. Data remains under `POCKETTA_DATA_DIR` until deletion.
+PocketTA binds to loopback addresses, restricts the LM Studio URL to loopback, ignores proxy environment variables for model calls, and contains no analytics, CDN assets, accounts, or model downloader. In Cerebras mode, source text used for generation and selected page/slide images leave the machine for cloud processing. Originals and extracted results remain under `POCKETTA_DATA_DIR` until deletion. API keys stay on the server; model-run records contain metadata rather than prompts or source content.
 
-Initial installation requires internet. Local execution reduces disclosure risk but is not a formal security proof, and generated material can be incomplete or wrong. Browser tab recording currently depends on Chromium tab-capture behavior and requires the user to explicitly share tab audio. Inspect generated material's cited evidence.
+Initial installation requires internet. Cerebras mode also requires internet during generation and vision analysis; local text mode uses prepared LM Studio models. Local execution reduces disclosure risk but is not a formal security proof, and generated material can be incomplete or wrong. Browser tab recording currently depends on Chromium tab-capture behavior and requires the user to explicitly share tab audio. Inspect generated material's cited evidence.
 
 The bundled 2.5-minute demo is an attributed excerpt of MIT OpenCourseWare material. Its CC BY-NC-SA licence and derivation are documented in [samples/README.md](samples/README.md); it is not relicensed under PocketTA's MIT code licence.
 

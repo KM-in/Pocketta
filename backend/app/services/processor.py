@@ -11,7 +11,8 @@ import psutil
 from ..config import Settings
 from ..database import Database
 from ..models import LectureStatus, ProcessingMetrics
-from .lm_studio import LMStudioService
+from .gateway import ModelGateway
+from ..courses import CourseStore
 from .media import MediaService
 from .processes import ProcessRegistry
 from .whisper import TranscriptionService
@@ -76,17 +77,20 @@ class LectureProcessor:
         self.processes = ProcessRegistry()
         self.media = MediaService(settings, self.processes)
         self.transcription = TranscriptionService(settings, self.processes)
-        self.lm_studio = LMStudioService(settings)
+        self.lm_studio = ModelGateway(settings, database)
         self.cancelled: set[str] = set()
         self.queued_ids: set[str] = set()
         self.active_tasks: dict[str, asyncio.Task[None]] = {}
         self.worker_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
+        CourseStore(self.database).initialize()
         await asyncio.to_thread(self._cleanup_temporary_files)
         for lecture_id in self.database.recover_incomplete():
             lecture = self.database.get_lecture(lecture_id)
-            self.enqueue(lecture_id, generation_only=bool(lecture and lecture.transcript))
+            self.enqueue(
+                lecture_id, generation_only=bool(lecture and lecture.transcript)
+            )
         self.worker_task = asyncio.create_task(self._worker(), name="pocketta-worker")
 
     async def stop(self) -> None:
@@ -200,7 +204,9 @@ class LectureProcessor:
         metrics = RunMetrics(
             base_total_seconds=existing.metrics.total_seconds if existing else 0,
             stage_seconds=dict(existing.metrics.stage_seconds) if existing else {},
-            peak_system_memory_mb=existing.metrics.peak_system_memory_mb if existing else 0,
+            peak_system_memory_mb=(
+                existing.metrics.peak_system_memory_mb if existing else 0
+            ),
         )
         monitor = asyncio.create_task(self._monitor_memory(metrics))
         try:
@@ -256,9 +262,27 @@ class LectureProcessor:
                 "generating",
                 LectureStatus.GENERATING,
                 60,
-                "Building grounded notes, cards, and questions with local Qwen",
+                "Building grounded notes, cards, and questions",
             )
-            study_pack = await self.lm_studio.generate(transcript)
+            store = CourseStore(self.database)
+            store.attach_lecture(lecture_id)
+            mapping = store.sync_lecture_units(lecture_id)
+            grounded = transcript.model_copy(deep=True)
+            for segment in grounded.segments:
+                segment.id = mapping[segment.id]
+            self.lm_studio.source_id = lecture_id
+            study_pack = await self.lm_studio.generate(grounded)
+            study_pack.validate_evidence(grounded)
+            inverse = {v: k for k, v in mapping.items()}
+            # The legacy API retains segment IDs; course APIs resolve them to UUID units.
+            for collection in (
+                study_pack.notes,
+                study_pack.concepts,
+                study_pack.flashcards,
+                study_pack.quiz,
+            ):
+                for entry in collection:
+                    entry.segment_ids = [inverse[id] for id in entry.segment_ids]
             self._check(lecture_id)
             self.database.save_study_pack(lecture_id, study_pack)
             lecture_dir = self.settings.lectures_dir / lecture_id

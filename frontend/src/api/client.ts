@@ -1,8 +1,8 @@
 import type { HealthResponse, LectureDetail, LectureSummary, SegmentCorrection } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
     let message = `${response.status} ${response.statusText}`;
@@ -28,7 +28,7 @@ export const api = {
     if (title?.trim()) body.append("title", title.trim());
     return request<LectureSummary>("/lectures", { method: "POST", body });
   },
-  demo: () => request<LectureSummary>("/lectures/demo", { method: "POST" }),
+  demo: (courseId?: string) => request<LectureSummary>(`/lectures/demo${courseId ? `?course_id=${courseId}` : ""}`, { method: "POST" }),
   update: (id: string, update: { title?: string; corrections?: SegmentCorrection[] }) =>
     request<LectureDetail>(`/lectures/${id}`, {
       method: "PATCH",

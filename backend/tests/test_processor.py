@@ -26,7 +26,9 @@ def prepared_processor(tmp_path: Path, lecture_id: str = "lecture") -> LecturePr
 
 
 @pytest.mark.asyncio
-async def test_queued_lecture_can_be_cancelled_without_deleting_data(tmp_path: Path) -> None:
+async def test_queued_lecture_can_be_cancelled_without_deleting_data(
+    tmp_path: Path,
+) -> None:
     processor = prepared_processor(tmp_path)
     processor.enqueue("lecture")
     assert await processor.cancel("lecture") is True
@@ -37,7 +39,9 @@ async def test_queued_lecture_can_be_cancelled_without_deleting_data(tmp_path: P
 
 
 @pytest.mark.asyncio
-async def test_generation_only_job_persists_metrics_and_completes(tmp_path: Path) -> None:
+async def test_generation_only_job_persists_metrics_and_completes(
+    tmp_path: Path,
+) -> None:
     processor = prepared_processor(tmp_path)
     processor.database.save_transcript("lecture", transcript())
     processor.database.save_metrics(
@@ -45,7 +49,9 @@ async def test_generation_only_job_persists_metrics_and_completes(tmp_path: Path
         ProcessingMetrics(stage_seconds={"transcribing": 2.5}, total_seconds=2.5),
     )
     processor.database.update_status("lecture", LectureStatus.TRANSCRIBED)
-    processor.lm_studio.generate = AsyncMock(return_value=study_pack())
+    processor.lm_studio.generate = AsyncMock(
+        side_effect=lambda evidence: study_pack(evidence.segments[0].id)
+    )
     await processor.start()
     try:
         processor.enqueue_generation("lecture")
@@ -55,6 +61,9 @@ async def test_generation_only_job_persists_metrics_and_completes(tmp_path: Path
     lecture = processor.database.get_lecture("lecture")
     assert lecture is not None
     assert lecture.status == LectureStatus.COMPLETED
+    supplied = processor.lm_studio.generate.call_args.args[0]
+    assert supplied.segments[0].id != "seg-0001"
+    assert lecture.study_pack.notes[0].segment_ids == ["seg-0001"]
     assert "generating" in lecture.metrics.stage_seconds
     assert lecture.metrics.stage_seconds["transcribing"] == 2.5
     assert lecture.metrics.total_seconds >= 2.5

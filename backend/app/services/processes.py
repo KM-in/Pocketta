@@ -14,7 +14,13 @@ class ProcessRegistry:
         self._processes: dict[str, subprocess.Popen[str]] = {}
         self._lock = threading.Lock()
 
-    def run(self, lecture_id: str, command: list[str], cwd: Path | None = None) -> str:
+    def run(
+        self,
+        lecture_id: str,
+        command: list[str],
+        cwd: Path | None = None,
+        timeout: float | None = None,
+    ) -> str:
         process = subprocess.Popen(
             command,
             cwd=cwd,
@@ -25,7 +31,14 @@ class ProcessRegistry:
         with self._lock:
             self._processes[lecture_id] = process
         try:
-            stdout, stderr = process.communicate()
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired as error:
+                process.kill()
+                process.communicate()
+                raise ProcessFailed(
+                    "Source conversion timed out; check the file and retry"
+                ) from error
         finally:
             with self._lock:
                 self._processes.pop(lecture_id, None)

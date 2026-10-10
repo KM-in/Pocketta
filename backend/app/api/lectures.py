@@ -21,7 +21,6 @@ from ..services.exporter import render_markdown
 from ..services.media import SUPPORTED_EXTENSIONS
 from ..services.whisper import faster_whisper_readiness, whisper_cpp_readiness
 
-
 router = APIRouter(prefix="/api")
 
 
@@ -98,6 +97,22 @@ async def health(request: Request) -> HealthResponse:
             detail=f"configured={settings.transcription_backend}; selected={selected_backend}",
         ),
     }
+    components["document_renderer"] = HealthComponent(
+        ready=settings.executable_available(settings.libreoffice_path),
+        detail="LibreOffice is required for PPTX previews",
+        remediation="Install LibreOffice and set LIBREOFFICE_PATH to its soffice executable.",
+    )
+    if settings.model_provider == "cerebras":
+        components["cerebras"] = HealthComponent(
+            ready=bool(settings.cerebras_api_key),
+            detail=(
+                "Cloud text and vision processing configured"
+                if settings.cerebras_api_key
+                else "Missing CEREBRAS_API_KEY"
+            ),
+            remediation="Set CEREBRAS_API_KEY in the server environment.",
+        )
+        return HealthResponse(ready=components["cerebras"].ready, components=components)
     try:
         models = await processor.lm_studio.available_models()
         configured = settings.lm_studio_model_id
@@ -146,10 +161,13 @@ async def upload_lecture(
     request: Request,
     file: UploadFile = File(...),
     title: str | None = Form(default=None),
+    course_id: str | None = Form(default=None),
 ) -> LectureSummary:
     settings = request.app.state.settings
     database = request.app.state.database
     processor = request.app.state.processor
+    if course_id and not request.app.state.courses.course(course_id):
+        raise HTTPException(status_code=404, detail="Course not found")
     filename = Path(file.filename or "recording").name
     suffix = Path(filename).suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
@@ -177,12 +195,17 @@ async def upload_lecture(
             raise HTTPException(status_code=400, detail="The uploaded file is empty")
         clean_title = title.strip() if title and title.strip() else None
         if clean_title and len(clean_title) > 200:
-            raise HTTPException(status_code=422, detail="Title must be 200 characters or fewer")
+            raise HTTPException(
+                status_code=422, detail="Title must be 200 characters or fewer"
+            )
         database.create_lecture(lecture_id, filename, source_path, clean_title)
+        request.app.state.courses.attach_lecture(lecture_id, course_id)
         processor.enqueue(lecture_id)
         lecture = database.get_lecture(lecture_id)
         assert lecture is not None
-        return LectureSummary(**lecture.model_dump(exclude={"transcript", "study_pack"}))
+        return LectureSummary(
+            **lecture.model_dump(exclude={"transcript", "study_pack"})
+        )
     except Exception:
         if not database.exists(lecture_id):
             shutil.rmtree(lecture_dir, ignore_errors=True)
@@ -205,10 +228,16 @@ def get_lecture(request: Request, lecture_id: str) -> LectureDetail:
 
 
 @router.post(
-    "/lectures/demo", response_model=LectureSummary, status_code=status.HTTP_202_ACCEPTED
+    "/lectures/demo",
+    response_model=LectureSummary,
+    status_code=status.HTTP_202_ACCEPTED,
 )
-async def create_demo_lecture(request: Request) -> LectureSummary:
+async def create_demo_lecture(
+    request: Request, course_id: str | None = None
+) -> LectureSummary:
     settings = request.app.state.settings
+    if course_id and not request.app.state.courses.course(course_id):
+        raise HTTPException(status_code=404, detail="Course not found")
     sample = Path(__file__).resolve().parents[3] / "samples" / "pocketta-demo.m4a"
     if not sample.is_file():
         raise HTTPException(
@@ -227,10 +256,13 @@ async def create_demo_lecture(request: Request) -> LectureSummary:
             source_path,
             "PocketTA computation demo",
         )
+        request.app.state.courses.attach_lecture(lecture_id, course_id)
         request.app.state.processor.enqueue(lecture_id)
         lecture = request.app.state.database.get_lecture(lecture_id)
         assert lecture is not None
-        return LectureSummary(**lecture.model_dump(exclude={"transcript", "study_pack"}))
+        return LectureSummary(
+            **lecture.model_dump(exclude={"transcript", "study_pack"})
+        )
     except Exception:
         if not request.app.state.database.exists(lecture_id):
             shutil.rmtree(lecture_dir, ignore_errors=True)
@@ -247,15 +279,21 @@ def update_lecture(
     if not lecture:
         raise HTTPException(status_code=404, detail="Lecture not found")
     if processor.is_processing(lecture_id):
-        raise HTTPException(status_code=409, detail="Wait for processing to stop before editing")
+        raise HTTPException(
+            status_code=409, detail="Wait for processing to stop before editing"
+        )
     if update.title is not None:
         database.update_title(lecture_id, update.title)
     if update.corrections:
         if not lecture.transcript:
-            raise HTTPException(status_code=409, detail="This lecture has no transcript to edit")
+            raise HTTPException(
+                status_code=409, detail="This lecture has no transcript to edit"
+            )
         corrections = {item.segment_id: item.text for item in update.corrections}
         if len(corrections) != len(update.corrections):
-            raise HTTPException(status_code=422, detail="Duplicate transcript segment correction")
+            raise HTTPException(
+                status_code=422, detail="Duplicate transcript segment correction"
+            )
         valid_ids = {segment.id for segment in lecture.transcript.segments}
         unknown = sorted(set(corrections) - valid_ids)
         if unknown:
@@ -315,7 +353,7 @@ def export_lecture(request: Request, lecture_id: str) -> PlainTextResponse:
     if not lecture:
         raise HTTPException(status_code=404, detail="Lecture not found")
     try:
-        content = render_markdown(lecture)
+        content = render_markdown(lecture, request.app.state.settings.model_provider)
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     return PlainTextResponse(
