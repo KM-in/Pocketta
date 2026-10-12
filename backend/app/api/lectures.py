@@ -102,6 +102,19 @@ async def health(request: Request) -> HealthResponse:
         detail="LibreOffice is required for PPTX previews",
         remediation="Install LibreOffice and set LIBREOFFICE_PATH to its soffice executable.",
     )
+    components["embeddings"] = HealthComponent(
+        ready=bool(settings.openai_api_key),
+        detail=f"OpenAI model={settings.openai_embedding_model}; configuration only, not a connectivity check",
+        remediation="Set OPENAI_API_KEY on the server to enable embeddings.",
+    )
+    for role, model in (
+        ("verifier", settings.verifier_model),
+        ("grader", settings.grader_model),
+    ):
+        components[role] = HealthComponent(
+            ready=bool(model or settings.text_model),
+            detail=f"provider={settings.model_provider}; model={model or settings.text_model or 'unconfigured'}",
+        )
     if settings.model_provider == "cerebras":
         components["cerebras"] = HealthComponent(
             ready=bool(settings.cerebras_api_key),
@@ -270,7 +283,7 @@ async def create_demo_lecture(
 
 
 @router.patch("/lectures/{lecture_id}", response_model=LectureDetail)
-def update_lecture(
+async def update_lecture(
     request: Request, lecture_id: str, update: LectureUpdate
 ) -> LectureDetail:
     database = request.app.state.database
@@ -305,7 +318,10 @@ def update_lecture(
         for segment in revised.segments:
             if segment.id in corrections:
                 segment.text = corrections[segment.id]
+        request.app.state.courses.attach_lecture(lecture_id)
         database.replace_transcript_and_invalidate_pack(lecture_id, revised)
+        request.app.state.courses.sync_lecture_units(lecture_id)
+        request.app.state.knowledge.enqueue(lecture_id)
         lecture_dir = request.app.state.settings.lectures_dir / lecture_id
         (lecture_dir / "transcript.json").write_text(
             revised.model_dump_json(indent=2), encoding="utf-8"
@@ -321,7 +337,7 @@ def update_lecture(
     response_model=LectureSummary,
     status_code=status.HTTP_202_ACCEPTED,
 )
-def generate_study_pack(request: Request, lecture_id: str) -> LectureSummary:
+async def generate_study_pack(request: Request, lecture_id: str) -> LectureSummary:
     processor = request.app.state.processor
     try:
         processor.enqueue_generation(lecture_id)

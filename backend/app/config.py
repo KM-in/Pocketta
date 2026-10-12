@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +19,59 @@ class Settings(BaseSettings):
     cerebras_api_key: str = ""
     cerebras_text_model: str = "qwen-3.8-27b"
     cerebras_vision_model: str = "qwen-3.8-27b"
+    openai_api_key: str = ""
+    openai_embedding_model: str = "text-embedding-3-small"
+    retrieval_chunk_chars: int = Field(default=1200, ge=200, le=6000)
+    retrieval_chunk_overlap_chars: int = Field(default=160, ge=0)
+    embedding_batch_size: int = Field(default=32, ge=1, le=128)
+    retrieval_min_similarity: float = Field(default=0.65, ge=0, le=1)
+    knowledge_infer_topics: bool = False
+    verifier_model: str = ""
+    grader_model: str = ""
+    generation_timeout_seconds: float = Field(default=480, gt=0)
+    generation_chunk_chars: int = Field(default=14_000, ge=2000)
+    generation_chunk_overlap_segments: int = Field(default=1, ge=0)
+    job_concurrency: int = Field(default=2, ge=1)
+    course_job_concurrency: int = Field(default=1, ge=1)
+    provider_concurrency: int = Field(default=1, ge=1)
+    provider_request_interval_seconds: float = Field(default=0, ge=0)
+    # provider/model -> input/output USD per million tokens. Unknown rates stay null.
+    model_token_rates: dict[str, dict[str, float]] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def neutral_generation_settings(self):
+        if self.retrieval_chunk_overlap_chars >= self.retrieval_chunk_chars:
+            raise ValueError("Retrieval overlap must be smaller than chunk size")
+        for neutral, legacy in (
+            ("generation_timeout_seconds", "lm_studio_timeout_seconds"),
+            ("generation_chunk_chars", "lm_studio_chunk_chars"),
+            ("generation_chunk_overlap_segments", "lm_studio_chunk_overlap_segments"),
+        ):
+            if neutral not in self.model_fields_set:
+                setattr(self, neutral, getattr(self, legacy))
+        return self
+
+    @field_validator("model_token_rates")
+    @classmethod
+    def nonnegative_rates(cls, rates):
+        import math
+
+        if any(
+            not math.isfinite(v) or v < 0
+            for rate in rates.values()
+            for v in rate.values()
+        ):
+            raise ValueError("Token rates must be finite and nonnegative")
+        return rates
+
+    @property
+    def text_model(self):
+        return (
+            self.cerebras_text_model
+            if self.model_provider == "cerebras"
+            else self.lm_studio_model_id
+        )
+
     libreoffice_path: str = "soffice"
     max_document_pages: int = 500
 
@@ -38,9 +91,9 @@ class Settings(BaseSettings):
     lm_studio_base_url: str = "http://127.0.0.1:1234/v1"
     lm_studio_model_id: str = ""
     lm_studio_api_key: str = ""
-    lm_studio_timeout_seconds: float = 480.0
+    lm_studio_timeout_seconds: float = Field(default=480, gt=0)
     lm_studio_chunk_chars: int = 14_000
-    lm_studio_chunk_overlap_segments: int = 1
+    lm_studio_chunk_overlap_segments: int = Field(default=1, ge=0)
     max_upload_mb: int = 200
     uncertain_confidence_threshold: float = 0.60
     temporary_file_max_age_hours: int = 24

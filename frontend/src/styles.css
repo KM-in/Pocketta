@@ -138,7 +138,7 @@ h1 { font-size: clamp(40px, 6vw, 68px); line-height: .98; letter-spacing: -.035e
 .content-card > p { color: #4e4d46; line-height: 1.6; white-space: pre-line; }
 .evidence { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-top: 14px; margin-top: 18px; border-top: 1px solid #eee9df; }
 .evidence span { color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
-.evidence button { border: 0; border-radius: 999px; padding: 4px 7px; color: var(--green); background: var(--green-soft); font: 700 10px ui-monospace, monospace; cursor: pointer; }
+.evidence button, .evidence a { border: 0; border-radius: 999px; padding: 4px 7px; color: var(--green); background: var(--green-soft); font: 700 10px ui-monospace, monospace; cursor: pointer; }
 .card-label { margin: 0 0 7px !important; color: var(--orange) !important; font-size: 10px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
 .divider { border-top: 1px dashed #ccc4b6; margin: 19px 0; }
 .options { display: grid; gap: 8px; }
@@ -189,7 +189,7 @@ h1 { font-size: clamp(40px, 6vw, 68px); line-height: .98; letter-spacing: -.035e
 
 @media print {
   :root, body { background: white; color: black; }
-  .sidebar, .header-actions, .tabs, .evidence button, .transcript-actions, .text-button, .error-banner { display: none !important; }
+  .sidebar, .header-actions, .tabs, .evidence button, .evidence a, .transcript-actions, .text-button, .error-banner { display: none !important; }
   .app-shell { display: block; }
   .lecture-page { width: 100%; padding: 0; }
   .lecture-header { border: 0; }
@@ -222,3 +222,12 @@ h1 { font-size: clamp(40px, 6vw, 68px); line-height: .98; letter-spacing: -.035e
 .workspace-main .lecture-page, .workspace-main .welcome { width:100%; padding:32px 0; }
 .status.ready { color:var(--green); background:var(--green-soft); }
 .sidebar > .button.secondary { margin-top:auto; }
+
+.tutor form { display: grid; gap: 12px; margin-top: 20px; }
+.tutor label { display: grid; gap: 7px; font-weight: 600; }
+.tutor textarea, .tutor select { font: inherit; color: var(--ink); padding: 12px; border: 1px solid #cbd2ca; border-radius: 8px; background: var(--paper); }
+.tutor textarea { min-height: 90px; resize: vertical; }
+.tutor .button { justify-self: start; }
+.tutor-turn { margin: 18px 0; }
+.understanding-check { padding: 16px; margin-top: 16px; border: 1px solid #cbd2ca; border-radius: 8px; }
+.evidence a { text-decoration: none; }

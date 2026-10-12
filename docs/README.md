@@ -1,5 +1,7 @@
 # PocketTA Local Operations
 
+See [course tutor and citations](TUTOR.md), [knowledge retrieval](KNOWLEDGE.md) and [model and processing configuration](FOUNDATION.md) for cloud provider keys, model roles, cost tracking, scheduling, and smoke checks. The local/offline checklist below applies when cloud capabilities are not used.
+
 ## Native Preparation
 
 Install FFmpeg using the operating system package manager. Build whisper.cpp into `vendor/whisper.cpp`, then place `ggml-base.en.bin` in `vendor/whisper.cpp/models`. The configured paths can be overridden in `.env` and must point to prepared local files.
@@ -22,7 +24,7 @@ Install the NVIDIA CUDA cuBLAS/cuDNN runtime libraries required by Faster Whispe
 
 Install LM Studio, download Qwen 3.5 4B while online, and load it manually with a context length of at least 16K. Start the local server in LM Studio's Developer tab on `127.0.0.1:1234`. PocketTA checks `/v1/models` but never starts the server, loads a model, or downloads one.
 
-PocketTA sends one generation request at a time, accepts LM Studio's structured content or reasoning-content response field, and rejects generated citations to uncertain transcript segments. Inputs above `LM_STUDIO_CHUNK_CHARS` are summarized in chronological evidence-linked chunks before final generation.
+PocketTA sends one generation request at a time, accepts LM Studio's structured content or reasoning-content response field, and rejects generated citations to uncertain transcript segments. Inputs above `GENERATION_CHUNK_CHARS` (or its legacy `LM_STUDIO_CHUNK_CHARS` alias) are summarized in chronological evidence-linked chunks before final generation.
 
 The default request timeout is eight minutes because measured structured generation on the 8 GB reference machine can exceed six minutes for a 10-minute transcript.
 
@@ -48,7 +50,7 @@ If the selected stream has no audio track, PocketTA stops the capture and explai
 
 SQLite and lecture directories are stored below `POCKETTA_DATA_DIR`. Each UUID directory contains the original source and completed transcript/study-pack JSON. Normalized audio is temporary. `DELETE /api/lectures/{id}` cancels owned native work, deletes this directory, and removes its database row.
 
-The application contains no CDN, telemetry, cloud client, account, model downloader, vector database, or chatbot.
+The application contains no CDN, telemetry, accounts, model downloader, or external vector database. Tutor history and check grades stay in local SQLite; configured model providers receive relevant evidence, questions, and submitted answers.
 
 ## Offline Acceptance Checklist
 

@@ -254,6 +254,7 @@ async def test_generation_recovery_and_citation_resolution(tmp_path, monkeypatch
     monkeypatch.setattr(ModelGateway, "generate", generate)
     # Startup must resume generation rather than replacing it with an extraction-only job.
     await app.state.documents.start()
+    await app.state.scheduler.start()
     await app.state.documents.queue.join()
     await app.state.documents.stop()
     assert store.source(id)["study_pack"]["notes"][0]["content_unit_ids"] == [unit_id]
@@ -323,7 +324,7 @@ async def test_gateway_retries_rate_limits_records_usage_and_hides_errors(
     def respond(request):
         calls.append(request)
         if len(calls) == 1:
-            return httpx.Response(429)
+            return httpx.Response(429, headers={"Retry-After": "0"})
         return httpx.Response(
             200,
             json={

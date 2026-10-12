@@ -1,4 +1,47 @@
-# PocketTA Local Architecture and Technical Report
+# PocketTA Architecture
+
+PocketTA is a course-based modular monolith: a React client, one FastAPI process, SQLite metadata, local assets, and configurable model APIs. It currently extracts citable source content and generates source study packs. Course-scoped hybrid retrieval, stable topics, and stored prerequisite links now share original source evidence. The course tutor now retrieves evidence, verifies claim support in a separate model pass, and saves explicit understanding checks. Verified assessment banks and persistent mastery are subsequent features.
+
+## Current processing foundation
+
+```mermaid
+flowchart TD
+    UI[React course workspace + measured upload progress] --> API[FastAPI course/source APIs]
+    API --> Scheduler[Shared course-fair scheduler]
+    Scheduler --> Documents[PDF/PPTX extraction + rendered previews]
+    Scheduler --> Recordings[FFmpeg + local Whisper transcription]
+    Documents --> Store[SQLite + original assets + citable content units]
+    Recordings --> Store
+    Store --> Generation[Provider-neutral study-pack orchestration]
+    Generation --> Gateway[ModelGateway]
+    Gateway --> Coordinator[Shared provider request coordinator]
+    Coordinator --> Local[LM Studio text]
+    Coordinator --> Cloud[Cerebras text/vision + verifier/grader roles]
+    Coordinator --> Embeddings[OpenAI embeddings]
+    Gateway --> Runs[Usage + cost estimates + validation outcomes]
+    Store --> Retrieval[Course EvidenceBundle]
+    Retrieval --> Tutor[Tutor claims + explicit checks]
+    Tutor --> Verification[Separate support verification]
+    Verification --> Chat[Saved chat + used citations]
+    Verification --> Checks[Private check rubrics + saved grades]
+    Chat --> Citation[Course-scoped document viewer + media seek]
+```
+
+- `GenerationService` owns evidence filtering, prompt chunking, schema validation, repair, and grounded study-pack construction. `ModelGateway` extends this neutral orchestration and composes provider adapters; it does not inherit LM Studio orchestration or mutate model settings.
+- Gateway capabilities are structured generation with model-role routing, document vision, OpenAI embeddings, and rubric-based grading. Source extraction builds original-text chunks, SQLite FTS5 keyword rows, and OpenAI vectors when configured. Hybrid retrieval merges keyword and semantic ranks into bounded citable evidence bundles; the tutor shares those bundles with generation and verification and projects them into rubric-based check grading.
+- Source attribution uses request-local context, so concurrent recording jobs cannot overwrite each other's model-run source or course IDs.
+- One scheduler dispatches both document and recording jobs FIFO within a course and round-robin across eligible courses. Defaults: two active jobs globally, one per course. Existing source/lecture progress and cancellation APIs remain compatible.
+- One provider coordinator covers all application gateway instances, with per-provider concurrency, configurable pacing, shared `Retry-After` cooldowns, and transient request retries. Default: one in-flight request per provider. This is a single-process design.
+- SQLite model-run migrations preserve historical records and add course, attempts, validation outcome, cost estimate, and applied rates. Transport success and schema/evidence validity are separate outcomes. Provider usage is preferred; missing text usage is explicitly estimated and missing visual usage remains unknown.
+- React uploads use XMLHttpRequest byte events. Transfer completion remains separate from server acceptance and persisted extraction/transcription/generation progress.
+- Keys remain server-side. Cerebras receives relevant generation text and selected images; configured indexing sends reliable chunks to OpenAI, and semantic retrieval sends query text. Storage and transcription remain local. Local text generation can run offline with prepared models when no cloud capabilities are invoked.
+
+See [course tutor and citations](docs/TUTOR.md), [knowledge retrieval and held-out checks](docs/KNOWLEDGE.md), [foundation configuration and smoke checks](docs/FOUNDATION.md) and [course APIs](docs/COURSES.md). Model overrides fall back to the selected text model; missing embedding credentials do not block existing processing. Cost rates are configurable, never silently treated as free cloud inference.
+
+## Historical local recording report
+
+The report below documents the earlier local-only recording workflow and its benchmark results. Its single-queue and no-cloud descriptions apply to that historical configuration; the current architecture and defaults are specified above.
+
 
 PocketTA Local is a private lecture-processing app that runs transcription and study-pack generation on a user's own machine. It accepts uploaded or browser-recorded lecture audio, normalizes it locally, transcribes it with a local Whisper runtime, generates evidence-linked notes and practice material through a local LM Studio server, and stores all artifacts in a local SQLite-backed workspace.
 
