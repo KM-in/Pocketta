@@ -60,7 +60,7 @@ def test_health_reports_faster_whisper_without_requiring_it_in_auto(
         lambda settings: Readiness(False, "optional CUDA path is not ready"),
     )
     monkeypatch.setattr(
-        "backend.app.services.lm_studio.LMStudioService.available_models",
+        "backend.app.services.gateway.ModelGateway.available_models",
         lambda self: _available_models(),
     )
     app = create_app(

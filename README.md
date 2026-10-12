@@ -1,6 +1,6 @@
 # PocketTA
 
-PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, extracts citable content, and generates source-level study packs. React, FastAPI, SQLite, and recording transcription run locally. Select Cerebras for cloud text and vision processing, or LM Studio for local text generation. The application binds to loopback addresses.
+PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, extracts citable content, generates source-level study packs, and provides a cited course tutor. React, FastAPI, SQLite, and recording transcription run locally. Select Cerebras for cloud text and vision processing, or LM Studio for local text generation. The application binds to loopback addresses.
 
 ## What works
 
@@ -8,8 +8,13 @@ PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, ext
 - Extract native document text, render previews, and selectively analyse scans or visual pages with Cerebras. Cache rendered pages and vision results across retries.
 - Generate source-level study packs with validated content-unit IDs resolved to page, slide, or timestamp citations.
 - Retry/cancel processing, restore interrupted work, and preserve existing recordings under an Imported lectures course.
+- Show measured upload-transfer progress separately from processing progress.
+- Schedule document and recording jobs fairly across courses, with shared provider concurrency and rate-limit cooldowns.
+- Search original course evidence with hybrid keyword/embedding retrieval, exact page/slide/timestamp provenance, stable topics, and stored prerequisite links.
+- Ask a course tutor for explanations, examples, comparisons, and explicit understanding checks; verify claim support separately from citation IDs.
+- Restore course chat and saved check grades; open cited PDF pages/slides and seek recording timestamps.
 
-See [Course setup and API](docs/COURSES.md) for the new workflow and its boundaries.
+See [Course tutor and citations](docs/TUTOR.md), [Course knowledge and retrieval](docs/KNOWLEDGE.md), [Model and processing configuration](docs/FOUNDATION.md) and [Course setup and API](docs/COURSES.md) for the new workflow and its boundaries.
 
 The existing recording workflow also supports:
 
@@ -22,7 +27,7 @@ The existing recording workflow also supports:
 - Show coarse persisted progress, stage timings, observed system-memory use, browser connectivity, and local runtime readiness.
 - Start an attributed built-in demo and use the browser print dialog for PDF output.
 
-This build omits unified course revision packs, tutor chat, adaptive assessments/mastery dashboards, diarisation, accounts, cloud sync, semantic search, and native packaging.
+This build omits unified course revision packs, verified assessment banks, adaptive assessments/mastery dashboards, diarisation, accounts, cloud sync, and native packaging.
 
 ## Prerequisites
 
@@ -59,6 +64,8 @@ curl http://127.0.0.1:1234/v1/models
 ```
 
 Set that value as `LM_STUDIO_MODEL_ID` in `.env`.
+
+For embedding calls, separately set server-side `OPENAI_API_KEY`; `OPENAI_EMBEDDING_MODEL` defaults to `text-embedding-3-small`. Extracted source chunks are automatically embedded when OpenAI credentials are configured; otherwise keyword search remains available. `VERIFIER_MODEL` and `GRADER_MODEL` override the selected text model for those roles. Missing OpenAI credentials do not block existing processing. See [foundation setup](docs/FOUNDATION.md) for cost rates, scheduling, and smoke checks.
 
 For NVIDIA CUDA transcription, install the optional Python dependency while online:
 
@@ -123,7 +130,7 @@ The bundled 2.5-minute demo completed a post-hardening local run in 88.4 seconds
 
 ## Privacy and limitations
 
-PocketTA binds to loopback addresses, restricts the LM Studio URL to loopback, ignores proxy environment variables for model calls, and contains no analytics, CDN assets, accounts, or model downloader. In Cerebras mode, source text used for generation and selected page/slide images leave the machine for cloud processing. Originals and extracted results remain under `POCKETTA_DATA_DIR` until deletion. API keys stay on the server; model-run records contain metadata rather than prompts or source content.
+PocketTA binds to loopback addresses, restricts the LM Studio URL to loopback, ignores proxy environment variables for model calls, and contains no analytics, CDN assets, accounts, or model downloader. In Cerebras mode, source text used for generation and selected page/slide images leave the machine for cloud processing. Course indexing sends reliable source chunks to OpenAI when configured, and semantic queries send query text, even when text generation uses local LM Studio. Originals and extracted results remain under `POCKETTA_DATA_DIR` until deletion. API keys stay on the server; model-run records contain metadata rather than prompts or source content.
 
 Initial installation requires internet. Cerebras mode also requires internet during generation and vision analysis; local text mode uses prepared LM Studio models. Local execution reduces disclosure risk but is not a formal security proof, and generated material can be incomplete or wrong. Browser tab recording currently depends on Chromium tab-capture behavior and requires the user to explicitly share tab audio. Inspect generated material's cited evidence.
 
@@ -131,7 +138,7 @@ The bundled 2.5-minute demo is an attributed excerpt of MIT OpenCourseWare mater
 
 ## Project documentation
 
-- [Architecture](docs/ARCHITECTURE.md)
+- [Architecture](ARCHITECTURE.md)
 - [Operations and offline acceptance](docs/README.md)
 - [Demo runbook](docs/DEMO.md)
 - [Contributing](CONTRIBUTING.md)

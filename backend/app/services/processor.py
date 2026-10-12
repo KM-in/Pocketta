@@ -12,6 +12,7 @@ from ..config import Settings
 from ..database import Database
 from ..models import LectureStatus, ProcessingMetrics
 from .gateway import ModelGateway
+from .scheduler import CourseScheduler
 from ..courses import CourseStore
 from .media import MediaService
 from .processes import ProcessRegistry
@@ -70,18 +71,45 @@ class RunMetrics:
 
 
 class LectureProcessor:
-    def __init__(self, settings: Settings, database: Database):
+    def __init__(
+        self,
+        settings: Settings,
+        database: Database,
+        scheduler=None,
+        coordinator=None,
+        knowledge=None,
+    ):
         self.settings = settings
         self.database = database
+        if knowledge is None:
+            from .knowledge import KnowledgeService
+
+            knowledge = KnowledgeService(
+                settings, CourseStore(database), coordinator=coordinator
+            )
+        self.knowledge = knowledge
+        self.scheduler = scheduler or CourseScheduler(settings)
+        self.owns_scheduler = scheduler is None
         self.queue: asyncio.Queue[WorkItem] = asyncio.Queue()
         self.processes = ProcessRegistry()
         self.media = MediaService(settings, self.processes)
         self.transcription = TranscriptionService(settings, self.processes)
-        self.lm_studio = ModelGateway(settings, database)
+        self.lm_studio = ModelGateway(settings, database, coordinator=coordinator)
         self.cancelled: set[str] = set()
         self.queued_ids: set[str] = set()
         self.active_tasks: dict[str, asyncio.Task[None]] = {}
-        self.worker_task: asyncio.Task[None] | None = None
+
+    async def blocking(self, fn, *args):
+        # Cancellation cannot abandon a native thread that still owns source files.
+        task = asyncio.create_task(asyncio.to_thread(fn, *args))
+        try:
+            return await asyncio.shield(task)
+        except asyncio.CancelledError:
+            try:
+                await task
+            except Exception:
+                pass
+            raise
 
     async def start(self) -> None:
         CourseStore(self.database).initialize()
@@ -91,27 +119,43 @@ class LectureProcessor:
             self.enqueue(
                 lecture_id, generation_only=bool(lecture and lecture.transcript)
             )
-        self.worker_task = asyncio.create_task(self._worker(), name="pocketta-worker")
+        if self.owns_scheduler:
+            await self.scheduler.start()
 
     async def stop(self) -> None:
-        for lecture_id, task in list(self.active_tasks.items()):
+        if self.owns_scheduler:
+            self.scheduler.running = False
+        for lecture_id in list(self.queued_ids | self.active_tasks.keys()):
             await asyncio.to_thread(self.processes.terminate, lecture_id)
-            task.cancel()
-        if self.worker_task:
-            self.worker_task.cancel()
-            try:
-                await self.worker_task
-            except asyncio.CancelledError:
-                pass
+            await self.scheduler.cancel(lecture_id)
+        if self.owns_scheduler:
+            await self.scheduler.stop()
 
     def enqueue(self, lecture_id: str, *, generation_only: bool = False) -> None:
-        if lecture_id in self.queued_ids or lecture_id in self.active_tasks:
+        if self.is_processing(lecture_id):
             raise ValueError("Lecture is already processing")
+        store = CourseStore(self.database)
+        store.attach_lecture(lecture_id)
         self.queued_ids.add(lecture_id)
-        self.queue.put_nowait(WorkItem(lecture_id, generation_only))
+        item = WorkItem(lecture_id, generation_only)
+        self.queue.put_nowait(item)
+        with self.database._connect() as c:
+            row = c.execute(
+                "SELECT course_id FROM sources WHERE id=?", (lecture_id,)
+            ).fetchone()
+        self.scheduler.submit(
+            lecture_id,
+            row["course_id"] if row else "legacy",
+            lambda: self._run_job(item),
+            lambda: self._job_done(lecture_id),
+        )
 
     def is_processing(self, lecture_id: str) -> bool:
-        return lecture_id in self.queued_ids or lecture_id in self.active_tasks
+        return (
+            lecture_id in self.queued_ids
+            or lecture_id in self.active_tasks
+            or f"knowledge:{lecture_id}" in self.scheduler.jobs
+        )
 
     async def cancel(self, lecture_id: str) -> bool:
         lecture = self.database.get_lecture(lecture_id)
@@ -119,6 +163,10 @@ class LectureProcessor:
             return False
         if not self.is_processing(lecture_id):
             raise ValueError("Lecture is not currently processing")
+        if f"knowledge:{lecture_id}" in self.scheduler.jobs:
+            await self.scheduler.cancel(f"knowledge:{lecture_id}")
+            self.knowledge.set_status(lecture_id, "cancelled")
+            return True
         self.cancelled.add(lecture_id)
         self.database.update_status(
             lecture_id,
@@ -127,9 +175,7 @@ class LectureProcessor:
             message="Processing cancelled; local results were retained",
         )
         await asyncio.to_thread(self.processes.terminate, lecture_id)
-        active_task = self.active_tasks.get(lecture_id)
-        if active_task:
-            active_task.cancel()
+        await self.scheduler.cancel(lecture_id)
         return True
 
     def enqueue_generation(self, lecture_id: str) -> None:
@@ -152,6 +198,7 @@ class LectureProcessor:
         self.enqueue(lecture_id, generation_only=True)
 
     async def delete(self, lecture_id: str) -> bool:
+        await self.scheduler.cancel(f"knowledge:{lecture_id}")
         if not self.database.exists(lecture_id):
             return False
         self.cancelled.add(lecture_id)
@@ -161,42 +208,36 @@ class LectureProcessor:
             progress=0,
             message="Deleting local files and results",
         )
-        active_task = self.active_tasks.get(lecture_id)
-        if active_task:
-            active_task.cancel()
         await asyncio.to_thread(self.processes.terminate, lecture_id)
+        await self.scheduler.cancel(lecture_id)
         lecture_dir = self.settings.lectures_dir / lecture_id
         await asyncio.to_thread(shutil.rmtree, lecture_dir, True)
         return self.database.delete(lecture_id)
 
-    async def _worker(self) -> None:
-        while True:
-            item = await self.queue.get()
-            lecture_id = item.lecture_id
-            self.queued_ids.discard(lecture_id)
-            try:
-                job_task = asyncio.create_task(
-                    self._process(item), name=f"pocketta-{lecture_id}"
+    def _job_done(self, lecture_id):
+        self.queued_ids.discard(lecture_id)
+        self.active_tasks.pop(lecture_id, None)
+        self.cancelled.discard(lecture_id)
+        self.queue.get_nowait()
+        self.queue.task_done()
+
+    async def _run_job(self, item):
+        lecture_id = item.lecture_id
+        self.queued_ids.discard(lecture_id)
+        self.active_tasks[lecture_id] = asyncio.current_task()
+        try:
+            self._check(lecture_id)
+            await self._process(item)
+        except (LectureCancelled, asyncio.CancelledError):
+            raise
+        except Exception as error:
+            if self.database.exists(lecture_id):
+                self.database.update_status(
+                    lecture_id,
+                    LectureStatus.FAILED,
+                    _safe_error(error),
+                    message="Processing stopped; review the error and retry if possible",
                 )
-                self.active_tasks[lecture_id] = job_task
-                await job_task
-            except LectureCancelled:
-                pass
-            except asyncio.CancelledError:
-                if asyncio.current_task() and asyncio.current_task().cancelling():
-                    raise
-            except Exception as error:
-                if self.database.exists(lecture_id):
-                    self.database.update_status(
-                        lecture_id,
-                        LectureStatus.FAILED,
-                        _safe_error(error),
-                        message="Processing stopped; review the error and retry if possible",
-                    )
-            finally:
-                self.active_tasks.pop(lecture_id, None)
-                self.cancelled.discard(lecture_id)
-                self.queue.task_done()
 
     async def _process(self, item: WorkItem) -> None:
         lecture_id = item.lecture_id
@@ -231,7 +272,7 @@ class LectureProcessor:
                     5,
                     "Preparing a private 16 kHz audio copy",
                 )
-                duration_ms = await asyncio.to_thread(
+                duration_ms = await self.blocking(
                     self.media.normalize, lecture_id, source, normalized
                 )
 
@@ -244,7 +285,7 @@ class LectureProcessor:
                     20,
                     "Transcribing locally with whisper.cpp",
                 )
-                transcript = await asyncio.to_thread(
+                transcript = await self.blocking(
                     self.transcription.transcribe, lecture_id, normalized, duration_ms
                 )
                 self._check(lecture_id)
@@ -267,11 +308,12 @@ class LectureProcessor:
             store = CourseStore(self.database)
             store.attach_lecture(lecture_id)
             mapping = store.sync_lecture_units(lecture_id)
+            await self.knowledge.index_source(lecture_id)
+            self._check(lecture_id)
             grounded = transcript.model_copy(deep=True)
             for segment in grounded.segments:
                 segment.id = mapping[segment.id]
-            self.lm_studio.source_id = lecture_id
-            study_pack = await self.lm_studio.generate(grounded)
+            study_pack = await self.lm_studio.generate(grounded, source_id=lecture_id)
             study_pack.validate_evidence(grounded)
             inverse = {v: k for k, v in mapping.items()}
             # The legacy API retains segment IDs; course APIs resolve them to UUID units.

@@ -7,6 +7,7 @@ import pytest
 
 from backend.app.config import Settings
 from backend.app.database import Database
+from backend.app.courses import CourseStore
 from backend.app.models import LectureStatus, ProcessingMetrics
 from backend.app.services.processor import LectureProcessor
 from backend.tests.test_models import study_pack, transcript
@@ -17,6 +18,7 @@ def prepared_processor(tmp_path: Path, lecture_id: str = "lecture") -> LecturePr
     settings.prepare_directories()
     database = Database(settings.database_path)
     database.initialize()
+    CourseStore(database).initialize()
     lecture_dir = settings.lectures_dir / lecture_id
     lecture_dir.mkdir()
     source = lecture_dir / "source.mp3"
@@ -50,7 +52,7 @@ async def test_generation_only_job_persists_metrics_and_completes(
     )
     processor.database.update_status("lecture", LectureStatus.TRANSCRIBED)
     processor.lm_studio.generate = AsyncMock(
-        side_effect=lambda evidence: study_pack(evidence.segments[0].id)
+        side_effect=lambda evidence, **kwargs: study_pack(evidence.segments[0].id)
     )
     await processor.start()
     try:

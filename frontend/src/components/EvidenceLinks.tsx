@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
-export const EvidenceContext = createContext<Record<string, { label: string; target: string }>>({});
+import { Link } from "react-router-dom";
+export const EvidenceContext = createContext<Record<string, { label: string; target: string; href?: string }>>({});
 
 export function EvidenceLinks({ ids }: { ids: string[] }) {
   const evidence = useContext(EvidenceContext);
@@ -12,7 +13,7 @@ export function EvidenceLinks({ ids }: { ids: string[] }) {
     <div className="evidence" aria-label="Source evidence">
       <span>Evidence</span>
       {ids.map((id) => (
-        <button key={id} type="button" onClick={() => visit(evidence[id]?.target ?? id)}>
+        evidence[id]?.href ? <Link key={id} to={evidence[id].href!}>{evidence[id].label}</Link> : <button key={id} type="button" onClick={() => visit(evidence[id]?.target ?? id)}>
           {evidence[id]?.label ?? id}
         </button>
       ))}

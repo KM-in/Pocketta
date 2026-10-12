@@ -4,9 +4,13 @@ from contextlib import closing
 import hashlib
 import json
 from pathlib import Path
+from threading import Lock
 from ..models import Transcript, TranscriptSegment
 from .gateway import ModelGateway
+from .scheduler import CourseScheduler
 from .processes import ProcessRegistry
+
+_PDFIUM_LOCK = Lock()  # PDFium native calls must not overlap across document jobs.
 
 VISION_PROMPT = "Transcribe visible text and describe only clearly supported diagrams and tables. Do not infer missing facts. Return transcription, description, and uncertain (true if anything material is unclear)."
 
@@ -27,7 +31,7 @@ def render_pdf_page(path: Path, page_index: int, output: Path):
         except (ValueError, OSError):
             pass  # A partial cache from a crash can be rebuilt from the original.
     try:
-        with closing(pdfium.PdfDocument(path)) as pdf:
+        with _PDFIUM_LOCK, closing(pdfium.PdfDocument(path)) as pdf:
             page = pdf[page_index]
             try:
                 textpage = page.get_textpage()
@@ -66,7 +70,7 @@ def pdf_length(path: Path):
     import pypdfium2 as pdfium
 
     try:
-        with closing(pdfium.PdfDocument(path)) as pdf:
+        with _PDFIUM_LOCK, closing(pdfium.PdfDocument(path)) as pdf:
             return len(pdf)
     except Exception as error:
         raise ValueError(
@@ -96,14 +100,23 @@ def pptx_text(path: Path):
 
 
 class DocumentProcessor:
-    def __init__(self, settings, store):
+    def __init__(
+        self, settings, store, scheduler=None, coordinator=None, knowledge=None
+    ):
         self.settings, self.store = settings, store
+        self.scheduler = scheduler or CourseScheduler(settings)
+        self.owns_scheduler = scheduler is None
+        self.coordinator = coordinator
+        if knowledge is None:
+            from .knowledge import KnowledgeService
+
+            knowledge = KnowledgeService(settings, store, coordinator=coordinator)
+        self.knowledge = knowledge
         self.queue = asyncio.Queue()
         self.pending = set()
         self.active = {}
         self.cancelled = set()
         self.processes = ProcessRegistry()
-        self.worker = None
 
     async def blocking(self, fn, *args):
         # Await native work on cancellation before deleting its files.
@@ -127,23 +140,26 @@ class DocumentProcessor:
             ]
         for id, kind in ids:
             self.enqueue(id, generation_only=kind == "generate")
-        self.worker = asyncio.create_task(self.run())
+        if self.owns_scheduler:
+            await self.scheduler.start()
 
     async def stop(self):
-        for id in list(self.active):
-            await self.cancel(id)
-            # A server shutdown is recoverable work, not an explicit user cancellation.
+        if self.owns_scheduler:
+            self.scheduler.running = False
+        for id in list(self.pending):
+            await asyncio.to_thread(self.processes.terminate, id)
+            await self.scheduler.cancel(id)
             if self.store.source(id):
                 self.store.update(id, "queued")
-        if self.worker:
-            self.worker.cancel()
-            try:
-                await self.worker
-            except asyncio.CancelledError:
-                pass
+        if self.owns_scheduler:
+            await self.scheduler.stop()
 
     def enqueue(self, id, generation_only=False):
-        if id in self.pending or id in self.active:
+        if (
+            id in self.pending
+            or id in self.active
+            or f"knowledge:{id}" in self.scheduler.jobs
+        ):
             raise ValueError("Source is already processing")
         self.cancelled.discard(id)
         self.store.update(id, "queued")
@@ -154,44 +170,47 @@ class DocumentProcessor:
             )
         self.pending.add(id)
         self.queue.put_nowait((id, generation_only))
+        course_id = self.store.source(id)["course_id"]
+        self.scheduler.submit(
+            id,
+            course_id,
+            lambda: self._run_job(id, generation_only),
+            lambda: self._job_done(id),
+        )
 
     async def cancel(self, id):
         self.cancelled.add(id)
         self.store.update(id, "cancelled")
         await asyncio.to_thread(self.processes.terminate, id)
-        if id in self.active:
-            self.active[id].cancel()
-            try:
-                await self.active[id]
-            except asyncio.CancelledError:
-                pass
+        await self.scheduler.cancel(id)
 
     def check(self, id):
         if id in self.cancelled or not self.store.source(id):
             raise asyncio.CancelledError()
 
-    async def run(self):
-        while True:
-            id, generation_only = await self.queue.get()
-            try:
-                self.check(id)
-                self.active[id] = asyncio.create_task(self.process(id, generation_only))
-                await self.active[id]
-            except asyncio.CancelledError:
-                if asyncio.current_task().cancelling():
-                    raise
-            except Exception as error:
-                self.store.update(id, "failed", error=str(error)[-1000:])
-            finally:
-                self.pending.discard(id)
-                self.cancelled.discard(id)
-                self.active.pop(id, None)
-                self.queue.task_done()
+    def _job_done(self, id):
+        self.pending.discard(id)
+        self.cancelled.discard(id)
+        self.active.pop(id, None)
+        self.queue.get_nowait()
+        self.queue.task_done()
+
+    async def _run_job(self, id, generation_only):
+        self.active[id] = asyncio.current_task()
+        try:
+            self.check(id)
+            await self.process(id, generation_only)
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            self.store.update(id, "failed", error=str(error)[-1000:])
 
     async def process(self, id, generation_only):
         source = self.store.source(id)
         path = Path(self.store.path(id))
-        gateway = ModelGateway(self.settings, self.store.db, id)
+        gateway = ModelGateway(
+            self.settings, self.store.db, id, coordinator=self.coordinator
+        )
         if not generation_only:
             self.store.update(id, "extracting", 5)
             slides = None
@@ -282,6 +301,8 @@ class DocumentProcessor:
                         )
                 self.store.update(id, "extracting", int(10 + 70 * (index + 1) / count))
             self.store.update(id, "indexing", 85)
+        self.check(id)
+        await self.knowledge.index_source(id)
         self.check(id)
         self.store.update(id, "ready", 100)
         # Extraction stays usable even when generation is unavailable. Generation is explicit.

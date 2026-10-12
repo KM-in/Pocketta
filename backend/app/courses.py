@@ -38,6 +38,30 @@ class CourseStore:
                 c.execute(
                     "ALTER TABLE sources ADD COLUMN work_kind TEXT NOT NULL DEFAULT 'extract'"
                 )
+        with self.db._connect() as c:
+            columns = {r["name"] for r in c.execute("PRAGMA table_info(model_runs)")}
+            for name, declaration in {
+                "course_id": "TEXT",
+                "attempts": "INTEGER NOT NULL DEFAULT 1",
+                "validation_status": "TEXT",
+                "estimated_cost_usd": "REAL",
+                "cost_rates_json": "TEXT",
+            }.items():
+                if name not in columns:
+                    c.execute(f"ALTER TABLE model_runs ADD COLUMN {name} {declaration}")
+        with self.db._connect() as c:
+            if "confidence" not in {
+                r["name"] for r in c.execute("PRAGMA table_info(content_units)")
+            }:
+                c.execute(
+                    "ALTER TABLE content_units ADD COLUMN confidence REAL NOT NULL DEFAULT 1"
+                )
+        from .services.knowledge import initialize_knowledge
+
+        initialize_knowledge(self.db)
+        from .services.tutor import initialize_tutor
+
+        initialize_tutor(self.db)
         for source in self.summaries(IMPORT_COURSE):
             self.sync_lecture_units(source["id"])
 
@@ -51,12 +75,26 @@ class CourseStore:
                     unit_id = self.unit_id(id, location)
                     mapping[seg.id] = unit_id
                     c.execute(
-                        """INSERT INTO content_units(id,source_id,location,text,native_text,uncertain)
-                        VALUES (?,?,?,?,?,?) ON CONFLICT(source_id,location) DO UPDATE
-                        SET text=excluded.text,native_text=excluded.native_text,uncertain=excluded.uncertain
-                        WHERE content_units.text!=excluded.text OR content_units.uncertain!=excluded.uncertain""",
-                        (unit_id, id, location, seg.text, seg.text, seg.uncertain),
+                        """INSERT INTO content_units(id,source_id,location,text,native_text,uncertain,confidence)
+                        VALUES (?,?,?,?,?,?,?) ON CONFLICT(source_id,location) DO UPDATE
+                        SET text=excluded.text,native_text=excluded.native_text,uncertain=excluded.uncertain,confidence=excluded.confidence
+                        WHERE content_units.text!=excluded.text OR content_units.uncertain!=excluded.uncertain OR content_units.confidence!=excluded.confidence""",
+                        (
+                            unit_id,
+                            id,
+                            location,
+                            seg.text,
+                            seg.text,
+                            seg.uncertain,
+                            seg.confidence,
+                        ),
                     )
+                current_ids = set(mapping.values())
+                for row in c.execute(
+                    "SELECT id FROM content_units WHERE source_id=?", (id,)
+                ).fetchall():
+                    if row["id"] not in current_ids:
+                        c.execute("DELETE FROM content_units WHERE id=?", (row["id"],))
         return mapping
 
     @staticmethod
@@ -134,8 +172,9 @@ class CourseStore:
             rows = c.execute(
                 """SELECT s.id,s.course_id,COALESCE(l.title,s.name) name,s.type,
                 COALESCE(l.status,s.status) status,COALESCE(l.progress,s.progress) progress,
-                CASE WHEN s.type='recording' THEN l.error ELSE s.error END error,s.created_at
-                FROM sources s LEFT JOIN lectures l ON s.id=l.id
+                CASE WHEN s.type='recording' THEN l.error ELSE s.error END error,s.created_at,
+                k.status knowledge_status,k.error knowledge_error
+                FROM sources s LEFT JOIN lectures l ON s.id=l.id LEFT JOIN knowledge_index k ON k.source_id=s.id
                 WHERE s.course_id=? ORDER BY s.created_at DESC""",
                 (course_id,),
             ).fetchall()
@@ -170,6 +209,14 @@ class CourseStore:
                             mapping[s] for s in item.pop("segment_ids") if s in mapping
                         ]
                 result["study_pack"] = pack
+        with self.db._connect() as c:
+            knowledge = c.execute(
+                "SELECT status,error,embedding_model FROM knowledge_index WHERE source_id=?",
+                (id,),
+            ).fetchone()
+        result["knowledge"] = (
+            dict(knowledge) if knowledge else {"status": "not_indexed", "error": None}
+        )
         result["content_units"] = self.units(id)
         return result
 

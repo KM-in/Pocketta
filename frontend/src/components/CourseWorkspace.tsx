@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserRouter, Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
-import { API_BASE, api, request } from "../api/client";
+import { BrowserRouter, Link, Route, Routes, useNavigate, useParams, useLocation } from "react-router-dom";
+import { API_BASE, api, request, uploadRequest, type UploadProgress } from "../api/client";
 import { LecturePage, ReadinessDetails } from "./LecturePage";
+import { CourseTutor } from "./CourseTutor";
+import { CitationFocus } from "./CitationFocus";
+import { CourseKnowledge } from "./CourseKnowledge";
 import { Recorder } from "./Recorder";
 import { StudyPackView } from "./StudyPackView";
 import { EvidenceContext } from "./EvidenceLinks";
@@ -9,7 +12,7 @@ import type { HealthResponse, LectureDetail, StudyPack } from "../types";
 
 export interface Course { id: string; title: string; description: string; source_count?: number }
 interface Unit { id: string; location: string; text: string; native_text: string; uncertain: boolean; preview_url: string | null }
-interface Source { id: string; course_id: string; name: string; type: string; status: string; progress: number; error: string | null; content_units: Unit[]; study_pack: null | Record<string, unknown>; asset_url: string }
+interface Source { id: string; course_id: string; name: string; type: string; version: number; status: string; progress: number; error: string | null; content_units: Unit[]; study_pack: null | Record<string, unknown>; asset_url: string; knowledge?: { status: string; error: string | null }; knowledge_status?: string }
 const ACTIVE = new Set(["queued", "extracting", "indexing", "generating", "normalizing", "transcribing", "deleting"]);
 const stamp = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 function locationLabel(location: string) {
@@ -25,12 +28,13 @@ function adaptPack(pack: Record<string, unknown>): StudyPack {
 }
 
 export default function CourseWorkspace() {
-  return <BrowserRouter><Routes><Route path="/" element={<Workspace />} /><Route path="/courses/:courseId" element={<Workspace />} /><Route path="/courses/:courseId/sources/:sourceId" element={<Workspace />} /><Route path="*" element={<Workspace />} /></Routes></BrowserRouter>;
+  return <BrowserRouter><Routes><Route path="/" element={<Workspace />} /><Route path="/courses/:courseId" element={<Workspace />} /><Route path="/courses/:courseId/tutor" element={<Workspace />} /><Route path="/courses/:courseId/sources/:sourceId" element={<Workspace />} /><Route path="*" element={<Workspace />} /></Routes></BrowserRouter>;
 }
 
 function Workspace() {
   const { courseId, sourceId } = useParams();
   const navigate = useNavigate();
+  const tutorPage = useLocation().pathname.endsWith("/tutor");
   const [courses, setCourses] = useState<Course[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [selected, setSelected] = useState<Source | null>(null);
@@ -38,6 +42,7 @@ function Workspace() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [transfer, setTransfer] = useState<UploadProgress | null>(null);
   const [setup, setSetup] = useState(false);
   const [form, setForm] = useState<"new" | "edit" | null>(null);
   const [title, setTitle] = useState("");
@@ -48,7 +53,7 @@ function Workspace() {
   const course = courses.find(c => c.id === courseId);
   const refresh = () => setRevision(n => n + 1);
 
-  useEffect(() => { setForm(null); }, [courseId]);
+  useEffect(() => { setForm(null); setTransfer(null); }, [courseId, sourceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,17 +70,17 @@ function Workspace() {
         const nextLecture = source?.type === "recording" ? await api.get(source.id) : null;
         if (cancelled) return;
         setCourses(nextCourses); setHealth(nextHealth); setSources(nextSources); setSelected(source ?? null); setLecture(nextLecture);
-        if (nextSources.some(s => ACTIVE.has(s.status))) timer = setTimeout(() => void load(), 1500);
+        if (nextSources.some(s => ACTIVE.has(s.status) || ["queued", "indexing"].includes(s.knowledge_status ?? ""))) timer = setTimeout(() => void load(), 1500);
       } catch (cause) { if (!cancelled) setError(cause instanceof Error ? cause.message : "Could not load workspace"); }
     };
     void load();
     return () => { cancelled = true; clearTimeout(timer); };
   }, [courseId, sourceId, revision]);
 
-  async function act(fn: () => Promise<unknown>) {
+  async function act(fn: () => Promise<unknown>, target?: string) {
     setBusy(true); setError("");
-    try { await fn(); refresh(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Action failed"); }
+    try { await fn(); if (!target || route.current === target) refresh(); }
+    catch (cause) { if (!target || route.current === target) setError(cause instanceof Error ? cause.message : "Action failed"); }
     finally { setBusy(false); }
   }
   async function upload(file?: File) {
@@ -83,9 +88,17 @@ function Workspace() {
     const target = route.current;
     await act(async () => {
       const body = new FormData(); body.append("file", file);
-      const source = await request<Source>(`/courses/${courseId}/sources`, { method: "POST", body });
+      setTransfer({ loaded: 0, total: null, transferred: false });
+      let source: Source;
+      try {
+        source = await uploadRequest<Source>(`/courses/${courseId}/sources`, body, progress => {
+          if (route.current === target) setTransfer(progress);
+        });
+      } finally {
+        if (route.current === target) setTransfer(null);
+      }
       if (route.current === target) navigate(`/courses/${courseId}/sources/${source.id}`);
-    });
+    }, target);
   }
   async function removeSource() {
     if (!selected || !confirm(`Permanently delete “${selected.name}” and its generated data?`)) return;
@@ -96,7 +109,7 @@ function Workspace() {
     await act(() => request(`/sources/${selected.id}/${action}`, { method: "POST" }));
   }
   const evidence = Object.fromEntries((selected?.content_units ?? []).flatMap(u => {
-    const entry = { label: `${selected?.name} · ${locationLabel(u.location)}`, target: u.location.startsWith("time:") ? u.location.split(":").slice(2).join(":") : u.id };
+    const entry = { label: `${selected?.name} · ${locationLabel(u.location)}`, href: `/courses/${courseId}/sources/${selected!.id}?citation=${encodeURIComponent(u.id)}&version=${selected!.version}`, target: u.location.startsWith("time:") ? u.location.split(":").slice(2).join(":") : u.id };
     return [[u.id, entry], ...(u.location.startsWith("time:") ? [[entry.target, entry]] : [])];
   }));
 
@@ -109,10 +122,14 @@ function Workspace() {
         {courses.map(c => <Link className={`course-link ${c.id === courseId ? "selected" : ""}`} key={c.id} to={`/courses/${c.id}`}><strong>{c.title}</strong><small>{c.source_count ?? 0} sources</small></Link>)}
       </nav>
       <button className="button secondary" onClick={() => setSetup(!setup)}>Engine & storage</button>
-      <p className="course-privacy">{health?.components.cerebras ? "Cloud mode: relevant source text and selected page images are sent to Cerebras." : "Local text generation. Document vision requires Cerebras configuration."}</p>
+      <p className="course-privacy">{health?.components.cerebras ? "Cloud mode: relevant source text and selected page images are sent to Cerebras." : "Local text generation. Document vision requires Cerebras configuration."} Embeddings send supplied source text to OpenAI when enabled.</p>
     </aside>
     <main className="workspace-main">
       {error && <div role="alert" className="error-banner">{error}<button className="text-button" onClick={refresh}>Retry connection</button></div>}
+      {transfer && <section className="processing-card" aria-live="polite" aria-label="Upload transfer">
+        <p>{transfer.transferred ? "Upload complete; waiting for server" : transfer.total ? `Uploading · ${Math.floor(transfer.loaded / transfer.total * 100)}%` : "Uploading…"}</p>
+        {!transfer.transferred && <progress aria-label="Upload progress" max={transfer.total ?? undefined} value={transfer.total ? transfer.loaded : undefined} />}
+      </section>}
       {setup && health && <section className="setup-card"><h2>Engine & storage</h2><ReadinessDetails health={health} /></section>}
       {form && <form className="setup-card course-form" aria-label={form === "new" ? "New course" : "Edit course"} onSubmit={event => {
         event.preventDefault(); void act(async () => {
@@ -127,11 +144,13 @@ function Workspace() {
       {!courseId && <div className="welcome"><p className="eyebrow">Your material. One workspace.</p><h1>Start with a course.</h1><p>Collect lectures, PDFs, and slides. Build study packs and follow every citation back to your source.</p></div>}
       {course && <>
         <header className="lecture-header"><div><Link to={`/courses/${course.id}`} className="eyebrow">Course workspace</Link><h1>{course.title}</h1><p>{course.description}</p></div>
-          <div className="header-actions"><button className="button secondary" disabled={busy} onClick={() => { setTitle(course.title); setDescription(course.description); setForm("edit"); }}>Edit course</button>
+          <div className="header-actions"><Link className="button" to={`/courses/${courseId}/tutor`}>Course tutor</Link><button className="button secondary" disabled={busy} onClick={() => { setTitle(course.title); setDescription(course.description); setForm("edit"); }}>Edit course</button>
             {!sources.length && <button className="button danger" disabled={busy} onClick={() => { if (confirm(`Delete empty course “${course.title}”?`)) void act(async () => { await request(`/courses/${course.id}`, { method: "DELETE" }); navigate("/"); }); }}>Delete course</button>}
           </div>
         </header>
-        {!selected && <>
+        {tutorPage && <CourseTutor key={`tutor-${courseId}`} courseId={courseId!} />}
+        {!selected && !tutorPage && <>
+          <CourseKnowledge key={`knowledge-${courseId}`} courseId={courseId!} />
           <label className={`drop-zone ${busy ? "disabled" : ""}`} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (!busy) void upload(e.dataTransfer.files[0]); }}>
             <input aria-label="Upload course source" type="file" accept=".pdf,.pptx,.wav,.mp3,.m4a,.mp4,.webm,.ogg" disabled={busy} onChange={e => { void upload(e.target.files?.[0]); e.target.value = ""; }} />
             <span className="upload-icon">↑</span><strong>Add course material</strong><span>PDF, PPTX, audio or video · up to 200 MB</span>
@@ -144,6 +163,12 @@ function Workspace() {
         </>}
         {selected && selected.course_id === courseId && <EvidenceContext.Provider value={evidence}>
           <Link className="text-button" to={`/courses/${courseId}`}>← All sources</Link>
+          <CitationFocus key={`citation-${selected.id}`} courseId={courseId!} sourceId={selected.id} assetUrl={selected.asset_url} recording={selected.type === "recording"} />
+          {selected.knowledge && <section className="setup-card" aria-label="Source knowledge index">
+            <p>Knowledge index: {selected.knowledge.status.replaceAll("_", " ")}</p>
+            {selected.knowledge.error && <p className="editing-note">{selected.knowledge.error}</p>}
+            <button className="button secondary" disabled={busy || ACTIVE.has(selected.status) || ["queued", "indexing"].includes(selected.knowledge.status)} onClick={() => void act(() => request(`/courses/${courseId}/sources/${selected.id}/index`, { method: "POST" }))}>Rebuild search index</button>
+          </section>}
           {selected.type === "recording" && lecture ? <LecturePage key={lecture.id} lecture={lecture} busy={busy} remove={removeSource} cancel={() => sourceAction("cancel")} generate={() => sourceAction("generate")} update={payload => act(() => api.update(lecture.id, payload))} /> : <DocumentView key={selected.id} source={selected} busy={busy} remove={removeSource} action={sourceAction} />}
           {selected.type === "recording" && selected.status === "failed" && <button className="button" disabled={busy} onClick={() => void sourceAction("retry")}>Retry source</button>}
         </EvidenceContext.Provider>}

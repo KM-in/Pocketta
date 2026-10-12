@@ -172,6 +172,12 @@ async def source_action(request: Request, id: str, action: str):
     if action not in ("retry", "cancel", "generate"):
         raise HTTPException(404, "Unknown source action")
     try:
+        if f"knowledge:{id}" in request.app.state.scheduler.jobs:
+            if action != "cancel":
+                raise ValueError("Source is already indexing")
+            await request.app.state.scheduler.cancel(f"knowledge:{id}")
+            request.app.state.knowledge.set_status(id, "cancelled")
+            return public_source(require_source(request, id))
         if source["type"] == "recording":
             processor = request.app.state.processor
             if action == "cancel":
@@ -204,6 +210,7 @@ async def source_action(request: Request, id: str, action: str):
 @router.delete("/sources/{id}", status_code=204)
 async def delete_source(request: Request, id: str):
     source = require_source(request, id)
+    await request.app.state.scheduler.cancel(f"knowledge:{id}")
     if source["type"] == "recording":
         await request.app.state.processor.delete(id)
     else:
@@ -239,7 +246,12 @@ def image(request: Request, id: str, unit_id: str):
 
 
 @router.get("/citations/{unit_id}")
-def citation(request: Request, unit_id: str):
+def citation(
+    request: Request,
+    unit_id: str,
+    course_id: str | None = None,
+    version: int | None = None,
+):
     with request.app.state.database._connect() as c:
         row = c.execute(
             "SELECT source_id FROM content_units WHERE id=?", (unit_id,)
@@ -247,17 +259,38 @@ def citation(request: Request, unit_id: str):
     if not row:
         raise HTTPException(404, "Citation not found")
     source = require_source(request, row["source_id"])
-    unit = next(u for u in source["content_units"] if u["id"] == unit_id)
+    if course_id is not None and source["course_id"] != course_id:
+        raise HTTPException(404, "Citation not found in this course")
+    if version is not None and source["version"] != version:
+        raise HTTPException(409, "Source changed since this citation was saved")
+    if course_id is not None and source.get("knowledge", {}).get("status") == "stale":
+        raise HTTPException(
+            409,
+            "Source evidence changed; rebuild its index before opening saved citations",
+        )
+    unit = next((u for u in source["content_units"] if u["id"] == unit_id), None)
+    if unit is None:
+        raise HTTPException(404, "Citation no longer exists")
+    if unit["uncertain"]:
+        raise HTTPException(409, "Citation extraction is uncertain")
+    from ..services.knowledge import location_citation
+
+    try:
+        location_citation(unit["location"])
+    except (ValueError, IndexError):
+        raise HTTPException(409, "Citation location is invalid")
     kind, location = unit["location"].split(":", 1)
     result = {
         "content_unit_id": unit_id,
         "source_id": source["id"],
         "course_id": source["course_id"],
         "source_name": source["name"],
+        "source_version": source["version"],
         "excerpt": unit["text"],
         "uncertain": bool(unit["uncertain"]),
     }
     if kind == "time":
+        result["target_id"] = location.split(":", 1)[1]
         start, end = location.split(":")[0].split("-")
         result.update(start_sec=int(start) / 1000, end_sec=int(end) / 1000)
     else:
@@ -313,3 +346,11 @@ def export(request: Request, id: str):
         media_type="text/markdown",
         headers={"Content-Disposition": f'attachment; filename="pocketta-{id}.md"'},
     )
+
+
+@router.get("/courses/{course_id}/citations/{unit_id}")
+def course_citation(
+    request: Request, course_id: str, unit_id: str, version: int | None = None
+):
+    require_course(request, course_id)
+    return citation(request, unit_id, course_id, version)

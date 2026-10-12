@@ -1,0 +1,29 @@
+{
+  "title": "Held-out OS fundamentals",
+  "description": "Synthetic source excerpts reserved for retrieval and future tutor/assessment checks.",
+  "sources": [
+    {"key": "textbook", "name": "OS textbook excerpts", "type": "pdf", "units": [
+      {"location": "page:12", "text": "A process is a program in execution. Each process has its own address space. The operating system saves the process state in a process control block during a context switch."},
+      {"location": "page:18", "text": "Threads within the same process share code, data, and open files. Each thread has its own stack and registers. Threads provide concurrent execution within one address space."},
+      {"location": "page:44", "text": "Deadlock occurs when a set of processes waits forever for resources held by another member of the set. The four necessary deadlock conditions are mutual exclusion, hold and wait, no preemption, and circular wait."},
+      {"location": "page:99", "text": "The teleportation scheduler guarantees unlimited throughput.", "uncertain": true}
+    ]},
+    {"key": "slides", "name": "CPU scheduling slides", "type": "pptx", "units": [
+      {"location": "slide:7", "text": "Round robin scheduling gives each ready process a fixed time quantum. When the quantum expires, the running process goes to the back of the ready queue."},
+      {"location": "slide:9", "text": "First come first served scheduling runs ready processes in arrival order. A long CPU burst can delay shorter jobs, producing the convoy effect."}
+    ]},
+    {"key": "lecture", "name": "Synchronization lecture excerpts", "type": "recording", "units": [
+      {"location": "time:62000-79000:seg-0004", "text": "A race condition occurs when the result depends on the interleaving of concurrent accesses to shared data. A mutex protects a critical section by allowing only one thread to enter at a time."}
+    ]}
+  ],
+  "questions": [
+    {"query": "What is a process address space?", "answer": "A process is a running program with its own address space.", "expected": [{"source": "textbook", "location": "page:12"}]},
+    {"query": "What do threads share?", "answer": "Threads share code, data, and open files; each has its own stack and registers.", "expected": [{"source": "textbook", "location": "page:18"}]},
+    {"query": "List the necessary deadlock conditions", "answer": "Mutual exclusion, hold and wait, no preemption, and circular wait.", "expected": [{"source": "textbook", "location": "page:44"}]},
+    {"query": "Explain round robin time quantum", "answer": "Each ready process gets a fixed time quantum and returns to the back of the queue when it expires.", "expected": [{"source": "slides", "location": "slide:7"}]},
+    {"query": "What causes the convoy effect?", "answer": "In first come first served scheduling, a long CPU burst delays shorter jobs.", "expected": [{"source": "slides", "location": "slide:9"}]},
+    {"query": "How does a mutex protect a critical section?", "answer": "A mutex permits only one thread to enter at a time.", "expected": [{"source": "lecture", "location": "time:62000-79000:seg-0004"}]},
+    {"query": "Explain photosynthesis in chloroplasts", "answer": null, "expected": []},
+    {"query": "Explain teleportation throughput", "answer": null, "expected": []}
+  ]
+}
