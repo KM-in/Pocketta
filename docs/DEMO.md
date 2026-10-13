@@ -17,12 +17,12 @@ Record a 5–7 minute walkthrough with an English voice track or English subtitl
 3. **Grounded tutor (60 sec):** ask a supported question, open its page/slide/timestamp citations, then ask an unsupported question and show the refusal.
 4. **Assessment (90 sec):** generate a mixed quiz with MCQ, short answer, and numerical questions. Show topic, difficulty, and citations; complete an attempt and point out deterministic MCQ/numerical grading and rubric-based short-answer feedback.
 5. **Learning loop (60 sec):** show saved attempts, topic mastery estimate, observation count, recent mistakes, and “insufficient evidence” for a new topic. Run a second session with an adaptive quiz and explain the BKT assumptions.
-6. **Evaluation and limits (45 sec):** report context precision/recall and unsupported-query behavior from the held-out fixture. State clearly whether faithfulness, live providers, and simulated learners were measured; do not present synthetic simulation or model confidence as proof of learning.
+6. **Evaluation and limits (45 sec):** report the held-out retrieval and live DeepEval results, including answer coverage (4/6 supported in the recorded run). Note that one isolated replay later answered a question the full run had refused, so repeated-run coverage is not measured. Include the generated-question quality smoke scores. State clearly that the same model family generated and judged answers/questions, and that the synthetic fixture and simulations are not proof of learning.
 7. **Submission close (20 sec):** show setup instructions, repository, and the Devpost project URL once these are published.
 
 ## Release gate
 
-- [x] Backend tests, frontend tests, and production build pass on latest `main` (139 backend and 46 frontend tests on 13 October 2026).
+- [x] Backend tests, frontend tests, and production build pass (140 backend and 46 frontend tests; backend rechecked 14 October 2026).
 - [ ] Live configured-provider flow works for supported and unsupported questions.
 - [ ] Real LibreOffice conversion works for PPT and PPTX, with matching slide counts.
 - [ ] Video extraction, vision descriptions, retrieval, and timestamp navigation work on the chosen sample.

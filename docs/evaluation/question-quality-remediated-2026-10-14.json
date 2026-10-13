@@ -1,0 +1,220 @@
+{
+  "framework": "Cerebras structured judge",
+  "created_at": "2026-10-13T18:53:26.261917+00:00",
+  "fixture": "synthetic-os-course-v1",
+  "provider": "cerebras",
+  "generation_model": "qwen-3.8-27b",
+  "judge_model": "cerebras:qwen-3.8-27b",
+  "generation_path": "production QuizService.generate, including its built-in verification and duplicate rejection",
+  "requested_quiz_count": 2,
+  "generated_quiz_count": 2,
+  "generation_attempts": 2,
+  "duplicate_rejected_batches": 0,
+  "verification_rejected_batches": 0,
+  "question_count": 8,
+  "quality_dimensions": {
+    "correctness": 1.0,
+    "clarity": 0.9875,
+    "single_best_answer": 1.0,
+    "evidence_support": 1.0
+  },
+  "prompt_repetition": {
+    "compared_pair_count": 28,
+    "exact_repeat_pair_count": 0,
+    "near_duplicate_pair_count": 0,
+    "repetition_rate": 0.0,
+    "near_duplicate_threshold": 0.88
+  },
+  "questions": [
+    {
+      "set_index": 1,
+      "kind": "mcq",
+      "topic": "process address space",
+      "prompt": "According to the source, what does the operating system save during a context switch?",
+      "options": [
+        "The process's entire address space in a shared memory segment",
+        "The process state in a process control block",
+        "The thread stack in a separate address space",
+        "The open files in a global file table"
+      ],
+      "answer": "The process state in a process control block",
+      "cited_excerpts": [
+        "A process is a program in execution. Each process has its own address space. The operating system saves the process state in a process control block during a context switch."
+      ],
+      "judge": {
+        "correctness": 1.0,
+        "clarity": 1.0,
+        "single_best_answer": 1.0,
+        "evidence_support": 1.0,
+        "reason": "The question directly asks what the OS saves during a context switch, and the cited evidence explicitly states 'The operating system saves the process state in a process control block during a context switch.' The answer key matches this exactly. The other three options (shared memory segment, thread stack in separate address space, global file table) are not supported by the source and are clearly distinguishable from the correct answer. The question is clear, unambiguous, and the evidence fully supports the answer. The topic label 'process address space' is slightly imprecise (the question is more about context switching/PCB), but the source chunk does mention address space, so it's not misleading."
+      }
+    },
+    {
+      "set_index": 1,
+      "kind": "mcq",
+      "topic": "threads",
+      "prompt": "Which of the following is NOT shared among threads within the same process?",
+      "options": [
+        "Code",
+        "Data",
+        "Stack",
+        "Open files"
+      ],
+      "answer": "Stack",
+      "cited_excerpts": [
+        "Threads within the same process share code, data, and open files. Each thread has its own stack and registers. Threads provide concurrent execution within one address space."
+      ],
+      "judge": {
+        "correctness": 1.0,
+        "clarity": 1.0,
+        "single_best_answer": 1.0,
+        "evidence_support": 1.0,
+        "reason": "The question is well-formed and unambiguous. The answer 'Stack' is correct: the cited evidence explicitly states that threads share code, data, and open files, while each thread has its own stack and registers. All three other options (Code, Data, Open files) are explicitly listed as shared, making 'Stack' the only defensible answer. The explanation accurately quotes the source, and the cited evidence directly and fully supports the answer key. No issues detected."
+      }
+    },
+    {
+      "set_index": 1,
+      "kind": "mcq",
+      "topic": "deadlock conditions",
+      "prompt": "Which of the following is NOT one of the four necessary conditions for deadlock as listed in the source?",
+      "options": [
+        "Mutual exclusion",
+        "Hold and wait",
+        "Preemption",
+        "Circular wait"
+      ],
+      "answer": "Preemption",
+      "cited_excerpts": [
+        "Deadlock occurs when a set of processes waits forever for resources held by another member of the set. The four necessary deadlock conditions are mutual exclusion, hold and wait, no preemption, and circular wait."
+      ],
+      "judge": {
+        "correctness": 1.0,
+        "clarity": 0.9,
+        "single_best_answer": 1.0,
+        "evidence_support": 1.0,
+        "reason": "The question correctly identifies that 'Preemption' is NOT one of the four necessary deadlock conditions, while 'no preemption' is. The cited evidence explicitly lists the four conditions as 'mutual exclusion, hold and wait, no preemption, and circular wait,' directly supporting the answer. All other options (mutual exclusion, hold and wait, circular wait) are verbatim from the source, making 'Preemption' the only option that is not listed. The single best answer is unambiguous. Clarity is slightly reduced (0.9) because the distinction between 'preemption' and 'no preemption' is subtle and could be perceived as a trick, but it is a legitimate test of precise knowledge of the conditions. The difficulty rating of 'medium' is appropriate for this level of distinction."
+      }
+    },
+    {
+      "set_index": 1,
+      "kind": "mcq",
+      "topic": "process address space",
+      "prompt": "Based on the source, which statement correctly describes the relationship between a process and its address space?",
+      "options": [
+        "A process shares its address space with all other processes on the system",
+        "Each process has its own address space",
+        "A process's address space is identical to the thread stack",
+        "The address space is created only during a context switch"
+      ],
+      "answer": "Each process has its own address space",
+      "cited_excerpts": [
+        "A process is a program in execution. Each process has its own address space. The operating system saves the process state in a process control block during a context switch."
+      ],
+      "judge": {
+        "correctness": 1.0,
+        "clarity": 1.0,
+        "single_best_answer": 1.0,
+        "evidence_support": 1.0,
+        "reason": "The question is well-constructed and directly supported by the cited evidence. The correct answer 'Each process has its own address space' is a verbatim statement from the source. The three distractors are clearly incorrect: (1) contradicts the source by claiming shared address space, (2) confuses address space with thread stack (a component, not the whole), and (3) incorrectly ties address space creation to context switches (the source mentions context switches in relation to saving process state in the PCB, not creating address spaces). The question is clear, unambiguous, and only one option is defensible. The evidence fully supports the answer key."
+      }
+    },
+    {
+      "set_index": 2,
+      "kind": "mcq",
+      "topic": "process address space",
+      "prompt": "During a context switch, what does the operating system save for a process?",
+      "options": [
+        "The process state in a process control block",
+        "The thread stack in shared memory",
+        "The open file descriptors in the kernel page table",
+        "The circular-wait graph in the PCB"
+      ],
+      "answer": "The process state in a process control block",
+      "cited_excerpts": [
+        "A process is a program in execution. Each process has its own address space. The operating system saves the process state in a process control block during a context switch."
+      ],
+      "judge": {
+        "correctness": 1.0,
+        "clarity": 1.0,
+        "single_best_answer": 1.0,
+        "evidence_support": 1.0,
+        "reason": "The question directly asks what the OS saves during a context switch, and the cited evidence explicitly states 'The operating system saves the process state in a process control block during a context switch.' The answer key matches this verbatim. The three distractors are clearly incorrect: thread stacks are not saved in shared memory, file descriptors are not saved in the kernel page table, and circular-wait graphs relate to deadlock detection, not context switching. The question is clear, unambiguous, and only one option is defensible. The evidence fully supports the answer without requiring inference beyond what is stated."
+      }
+    },
+    {
+      "set_index": 2,
+      "kind": "mcq",
+      "topic": "threads",
+      "prompt": "Which of the following items do threads within the same process share?",
+      "options": [
+        "Code, data, and open files",
+        "Stack, registers, and open files",
+        "Address space, stack, and registers",
+        "Code, stack, and registers"
+      ],
+      "answer": "Code, data, and open files",
+      "cited_excerpts": [
+        "Threads within the same process share code, data, and open files. Each thread has its own stack and registers. Threads provide concurrent execution within one address space."
+      ],
+      "judge": {
+        "correctness": 1.0,
+        "clarity": 1.0,
+        "single_best_answer": 1.0,
+        "evidence_support": 1.0,
+        "reason": "The question is factually correct: threads within the same process share code, data, and open files, while each thread has its own stack and registers. The answer key matches this. The question is clear and unambiguous. Regarding single best answer: Option A (Code, data, open files) is the only option where ALL listed items are shared. Option B includes stack and registers (per-thread). Option C includes stack and registers (per-thread). Option D includes stack and registers (per-thread). The cited evidence directly and explicitly states the shared items and the per-thread items, fully supporting both the correct answer and the elimination of distractors. All four criteria are fully satisfied."
+      }
+    },
+    {
+      "set_index": 2,
+      "kind": "mcq",
+      "topic": "deadlock conditions",
+      "prompt": "Which of the following is NOT one of the four necessary conditions for deadlock?",
+      "options": [
+        "Mutual exclusion",
+        "Hold and wait",
+        "Preemption",
+        "Circular wait"
+      ],
+      "answer": "Preemption",
+      "cited_excerpts": [
+        "Deadlock occurs when a set of processes waits forever for resources held by another member of the set. The four necessary deadlock conditions are mutual exclusion, hold and wait, no preemption, and circular wait."
+      ],
+      "judge": {
+        "correctness": 1.0,
+        "clarity": 1.0,
+        "single_best_answer": 1.0,
+        "evidence_support": 1.0,
+        "reason": "The question correctly identifies that 'Preemption' is NOT one of the four necessary deadlock conditions. The four conditions are mutual exclusion, hold and wait, no preemption, and circular wait. The cited evidence explicitly lists these four conditions, confirming that 'no preemption' (not 'preemption') is the correct condition. The answer key is accurate. The question is clearly worded, and the distinction between 'preemption' and 'no preemption' is a well-known nuance in OS theory. Only one option (Preemption) is defensible as the correct answer since the other three (mutual exclusion, hold and wait, circular wait) are all explicitly listed as conditions in the evidence. The cited evidence directly and fully supports the answer."
+      }
+    },
+    {
+      "set_index": 2,
+      "kind": "mcq",
+      "topic": "process address space",
+      "prompt": "According to the source, how is a process defined?",
+      "options": [
+        "A program in execution",
+        "A thread that owns a private address space",
+        "A set of processes waiting indefinitely for resources",
+        "A context switch between two threads"
+      ],
+      "answer": "A program in execution",
+      "cited_excerpts": [
+        "A process is a program in execution. Each process has its own address space. The operating system saves the process state in a process control block during a context switch."
+      ],
+      "judge": {
+        "correctness": 1.0,
+        "clarity": 1.0,
+        "single_best_answer": 1.0,
+        "evidence_support": 1.0,
+        "reason": "The question asks for the definition of a process, and the cited evidence explicitly states 'A process is a program in execution,' which directly matches the correct answer (Option A). The explanation accurately reflects the source. The question is clear and unambiguous. Regarding single best answer: Option B ('A thread that owns a private address space') is a plausible distractor since the source mentions address space, but it incorrectly substitutes 'thread' for 'process.' Option C is clearly unrelated. Option D misuses the context-switch mention from the source. Only Option A is defensible. The evidence fully and directly supports the correct answer and helps eliminate the distractors."
+      }
+    }
+  ],
+  "limitations": [
+    "This is a small synthetic fixture and not a human-annotated benchmark.",
+    "The same model family generates questions and judges them; scores are model estimates, not independent correctness labels.",
+    "Only accepted and saved questions are scored. Duplicate batches rejected by QuizService are counted but their discarded candidate text is not available for item-level scoring.",
+    "The run does not measure learning gains or performance on real student data."
+  ]
+}
