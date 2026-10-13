@@ -1,6 +1,6 @@
 # Shared course knowledge base
 
-Every extracted PDF page, PPTX slide, or timestamped transcript unit is indexed as original evidence. Routing summaries form a second searchable layer; generated study packs are not indexed. The React course workspace offers source selection, **Search course material**, and multi-source course packs. See [two-layer indexing and course packs](MULTI_SOURCE.md) for configuration, API additions, and recovery behavior.
+Every extracted PDF page, PPT/PPTX slide, timestamped transcript unit, and reliable analysed video-frame description is indexed as original evidence. Frame descriptions keep the sampled video timestamp and original frame image path, so citations seek the recording to that moment. Routing summaries form a second searchable layer; generated study packs are not indexed. The React course workspace offers source selection, **Search course material**, and multi-source course packs. See [two-layer indexing and course packs](MULTI_SOURCE.md) for configuration, API additions, and recovery behavior.
 
 ## Processing and provenance
 

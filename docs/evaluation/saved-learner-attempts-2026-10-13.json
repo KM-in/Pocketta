@@ -1,0 +1,782 @@
+{
+  "profiles": {
+    "new_learner": {
+      "adaptive": {
+        "accuracy": 0.4,
+        "mean_skill_gain": 0.19500000000000017,
+        "exact_question_repetition_rate": 0.7,
+        "topic_difficulty_pair_repetition_rate": 0.7,
+        "questions": 30,
+        "persisted_observations": 30,
+        "unique_saved_question_ids": 9,
+        "final_topic_mastery": {
+          "Threads": 0.260582164283795,
+          "Scheduling": 0.8950974483608417,
+          "Deadlocks": 0.883109784270047,
+          "Processes": 0.8763480777700875
+        },
+        "question_bank_validation": {
+          "question_count": 12,
+          "question_ids_unique": true,
+          "prompts_unique": true,
+          "keys_are_options": 12,
+          "answers_supported_by_cited_excerpt": 12,
+          "checks": [
+            {
+              "question_id": "fixture-processes-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-processes-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-processes-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-threads-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-threads-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-threads-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-deadlocks-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-deadlocks-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-deadlocks-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-scheduling-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-scheduling-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-scheduling-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "challenging"
+            }
+          ],
+          "limitation": "These deterministic checks apply only to the hand-authored simulator fixture, not to model-generated question quality or ambiguity."
+        }
+      },
+      "fixed_topic_medium": {
+        "accuracy": 0.3,
+        "mean_skill_gain": 0.1837500000000002,
+        "exact_question_repetition_rate": 0.8666666666666667,
+        "topic_difficulty_pair_repetition_rate": 0.8666666666666667,
+        "questions": 30,
+        "persisted_observations": 30,
+        "unique_saved_question_ids": 4,
+        "final_topic_mastery": {
+          "Threads": 0.5208587282322408,
+          "Processes": 0.18581726038012158,
+          "Scheduling": 0.2665949846459532,
+          "Deadlocks": 0.6775202129916862
+        },
+        "question_bank_validation": {
+          "question_count": 12,
+          "question_ids_unique": true,
+          "prompts_unique": true,
+          "keys_are_options": 12,
+          "answers_supported_by_cited_excerpt": 12,
+          "checks": [
+            {
+              "question_id": "fixture-processes-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-processes-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-processes-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-threads-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-threads-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-threads-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-deadlocks-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-deadlocks-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-deadlocks-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-scheduling-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-scheduling-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-scheduling-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "challenging"
+            }
+          ],
+          "limitation": "These deterministic checks apply only to the hand-authored simulator fixture, not to model-generated question quality or ambiguity."
+        }
+      }
+    },
+    "uneven_learner": {
+      "adaptive": {
+        "accuracy": 0.5666666666666667,
+        "mean_skill_gain": 0.21375000000000016,
+        "exact_question_repetition_rate": 0.6,
+        "topic_difficulty_pair_repetition_rate": 0.6,
+        "questions": 30,
+        "persisted_observations": 30,
+        "unique_saved_question_ids": 12,
+        "final_topic_mastery": {
+          "Deadlocks": 0.6560541133857605,
+          "Threads": 0.973463547940598,
+          "Processes": 0.9773510971786833,
+          "Scheduling": 0.9773510971786833
+        },
+        "question_bank_validation": {
+          "question_count": 12,
+          "question_ids_unique": true,
+          "prompts_unique": true,
+          "keys_are_options": 12,
+          "answers_supported_by_cited_excerpt": 12,
+          "checks": [
+            {
+              "question_id": "fixture-processes-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-processes-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-processes-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-threads-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-threads-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-threads-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-deadlocks-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-deadlocks-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-deadlocks-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-scheduling-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-scheduling-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-scheduling-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "challenging"
+            }
+          ],
+          "limitation": "These deterministic checks apply only to the hand-authored simulator fixture, not to model-generated question quality or ambiguity."
+        }
+      },
+      "fixed_topic_medium": {
+        "accuracy": 0.6,
+        "mean_skill_gain": 0.1900000000000001,
+        "exact_question_repetition_rate": 0.8666666666666667,
+        "topic_difficulty_pair_repetition_rate": 0.8666666666666667,
+        "questions": 30,
+        "persisted_observations": 30,
+        "unique_saved_question_ids": 4,
+        "final_topic_mastery": {
+          "Threads": 0.6584464757405438,
+          "Processes": 0.9999944331066281,
+          "Scheduling": 0.8831506380046005,
+          "Deadlocks": 0.918711095783372
+        },
+        "question_bank_validation": {
+          "question_count": 12,
+          "question_ids_unique": true,
+          "prompts_unique": true,
+          "keys_are_options": 12,
+          "answers_supported_by_cited_excerpt": 12,
+          "checks": [
+            {
+              "question_id": "fixture-processes-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-processes-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-processes-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-threads-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-threads-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-threads-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-deadlocks-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-deadlocks-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-deadlocks-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-scheduling-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-scheduling-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-scheduling-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "challenging"
+            }
+          ],
+          "limitation": "These deterministic checks apply only to the hand-authored simulator fixture, not to model-generated question quality or ambiguity."
+        }
+      }
+    },
+    "returning_learner": {
+      "adaptive": {
+        "accuracy": 0.6666666666666666,
+        "mean_skill_gain": 0.2250000000000002,
+        "exact_question_repetition_rate": 0.6,
+        "topic_difficulty_pair_repetition_rate": 0.6,
+        "questions": 30,
+        "persisted_observations": 30,
+        "unique_saved_question_ids": 12,
+        "final_topic_mastery": {
+          "Threads": 0.82946854709045,
+          "Processes": 0.9938436279814051,
+          "Deadlocks": 0.9806123133361461,
+          "Scheduling": 0.9773510971786833
+        },
+        "question_bank_validation": {
+          "question_count": 12,
+          "question_ids_unique": true,
+          "prompts_unique": true,
+          "keys_are_options": 12,
+          "answers_supported_by_cited_excerpt": 12,
+          "checks": [
+            {
+              "question_id": "fixture-processes-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-processes-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-processes-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-threads-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-threads-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-threads-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-deadlocks-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-deadlocks-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-deadlocks-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-scheduling-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-scheduling-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-scheduling-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "challenging"
+            }
+          ],
+          "limitation": "These deterministic checks apply only to the hand-authored simulator fixture, not to model-generated question quality or ambiguity."
+        }
+      },
+      "fixed_topic_medium": {
+        "accuracy": 0.7333333333333333,
+        "mean_skill_gain": 0.21500000000000008,
+        "exact_question_repetition_rate": 0.8666666666666667,
+        "topic_difficulty_pair_repetition_rate": 0.8666666666666667,
+        "questions": 30,
+        "persisted_observations": 30,
+        "unique_saved_question_ids": 4,
+        "final_topic_mastery": {
+          "Threads": 0.9148036975590973,
+          "Processes": 0.9987886968432158,
+          "Scheduling": 0.9998214480926049,
+          "Deadlocks": 0.9841626012210289
+        },
+        "question_bank_validation": {
+          "question_count": 12,
+          "question_ids_unique": true,
+          "prompts_unique": true,
+          "keys_are_options": 12,
+          "answers_supported_by_cited_excerpt": 12,
+          "checks": [
+            {
+              "question_id": "fixture-processes-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-processes-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-processes-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Processes",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-threads-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-threads-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-threads-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Threads",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-deadlocks-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-deadlocks-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-deadlocks-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Deadlocks",
+              "difficulty": "challenging"
+            },
+            {
+              "question_id": "fixture-scheduling-easy",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "easy"
+            },
+            {
+              "question_id": "fixture-scheduling-medium",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "medium"
+            },
+            {
+              "question_id": "fixture-scheduling-challenging",
+              "answer_is_an_option": true,
+              "citation_contains_expected_fact": true,
+              "topic": "Scheduling",
+              "difficulty": "challenging"
+            }
+          ],
+          "limitation": "These deterministic checks apply only to the hand-authored simulator fixture, not to model-generated question quality or ambiguity."
+        }
+      }
+    }
+  },
+  "mean_metrics": {
+    "adaptive": {
+      "accuracy": 0.5444444444444444,
+      "mean_skill_gain": 0.2112500000000002,
+      "exact_question_repetition_rate": 0.6333333333333333,
+      "topic_difficulty_pair_repetition_rate": 0.6333333333333333
+    },
+    "fixed_topic_medium": {
+      "accuracy": 0.5444444444444444,
+      "mean_skill_gain": 0.19625000000000012,
+      "exact_question_repetition_rate": 0.8666666666666667,
+      "topic_difficulty_pair_repetition_rate": 0.8666666666666667
+    }
+  },
+  "method": {
+    "sessions_per_profile": 6,
+    "questions_per_session": 5,
+    "saved_questions": 12,
+    "attempt_path": "QuizService.create_attempt -> save_answers -> submit; grades and topic observations are read back from SQLite.",
+    "adaptive_policy": "Choose the lowest persisted BKT estimate; easy below 0.45, medium below 0.80, challenging otherwise.",
+    "fixed_baseline": "Rotate topics in fixed order and use medium difficulty.",
+    "seed": 20261013,
+    "limitation": "Hand-authored questions and synthetic learner response/learning assumptions. This validates persistence/adaptation mechanics, not model question quality or real educational gains. Exact repetition counts compare saved question IDs across attempts."
+  },
+  "question_bank_validation": {
+    "question_count": 12,
+    "question_ids_unique": true,
+    "prompts_unique": true,
+    "keys_are_options": 12,
+    "answers_supported_by_cited_excerpt": 12,
+    "checks": [
+      {
+        "question_id": "fixture-processes-easy",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Processes",
+        "difficulty": "easy"
+      },
+      {
+        "question_id": "fixture-processes-medium",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Processes",
+        "difficulty": "medium"
+      },
+      {
+        "question_id": "fixture-processes-challenging",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Processes",
+        "difficulty": "challenging"
+      },
+      {
+        "question_id": "fixture-threads-easy",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Threads",
+        "difficulty": "easy"
+      },
+      {
+        "question_id": "fixture-threads-medium",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Threads",
+        "difficulty": "medium"
+      },
+      {
+        "question_id": "fixture-threads-challenging",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Threads",
+        "difficulty": "challenging"
+      },
+      {
+        "question_id": "fixture-deadlocks-easy",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Deadlocks",
+        "difficulty": "easy"
+      },
+      {
+        "question_id": "fixture-deadlocks-medium",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Deadlocks",
+        "difficulty": "medium"
+      },
+      {
+        "question_id": "fixture-deadlocks-challenging",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Deadlocks",
+        "difficulty": "challenging"
+      },
+      {
+        "question_id": "fixture-scheduling-easy",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Scheduling",
+        "difficulty": "easy"
+      },
+      {
+        "question_id": "fixture-scheduling-medium",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Scheduling",
+        "difficulty": "medium"
+      },
+      {
+        "question_id": "fixture-scheduling-challenging",
+        "answer_is_an_option": true,
+        "citation_contains_expected_fact": true,
+        "topic": "Scheduling",
+        "difficulty": "challenging"
+      }
+    ],
+    "limitation": "These deterministic checks apply only to the hand-authored simulator fixture, not to model-generated question quality or ambiguity."
+  }
+}

@@ -1,13 +1,14 @@
 # PocketTA
 
-PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, extracts citable content, generates source-level study packs, and provides a cited course tutor. React, FastAPI, SQLite, and recording transcription run locally. Select an OpenAI-compatible cloud endpoint (Cerebras by default) for text and vision processing, or LM Studio for local text generation. The application binds to loopback addresses.
+PocketTA organizes recordings, PDFs, PowerPoint decks, and legacy PPT slides into course workspaces, extracts citable content, generates source-level study packs, and provides a cited course tutor with verified assessments and a persistent topic learner model. React, FastAPI, SQLite, and recording transcription run locally. Select an OpenAI-compatible cloud endpoint (Cerebras by default) for text and vision processing, or LM Studio for local text generation. The application binds to loopback addresses.
 
 ## What works
 
-- Create and edit courses; collect recordings, PDFs, and PPTX slides within each course.
+- Create and edit courses; collect recordings, PDFs, PPTX slides, and legacy PPT decks within each course.
 - Select multiple sources, search both original passages and routing summaries, and generate verified course study packs organized by topic with coverage reports.
 - Configure a separate cloud or local OpenAI-compatible embedding service; existing OpenAI settings remain supported. See [multi-source setup](docs/MULTI_SOURCE.md).
 - Extract native document text, render previews, and selectively analyse scans or visual pages with Cerebras. Cache rendered pages and vision results across retries.
+- Sample up to 20 video frames per recording, analyse them with configured Cerebras vision, retain uncertainty and timestamps, and include reliable descriptions in course retrieval.
 - Generate source-level study packs with validated content-unit IDs resolved to page, slide, or timestamp citations.
 - Retry/cancel processing, restore interrupted work, and preserve existing recordings under an Imported lectures course.
 - Show measured upload-transfer progress separately from processing progress.
@@ -15,8 +16,10 @@ PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, ext
 - Search original course evidence with hybrid keyword/embedding retrieval, exact page/slide/timestamp provenance, stable topics, and stored prerequisite links.
 - Ask a course tutor for explanations, examples, comparisons, and explicit understanding checks; verify claim support separately from citation IDs.
 - Restore course chat and saved check grades; open cited PDF pages/slides and seek recording timestamps.
+- Generate and verify MCQ, short-answer, and numerical quizzes across selected course sources; save resumable attempts, cited feedback, topic observations, and adaptive next topics. Mastery estimates use documented Bayesian Knowledge Tracing assumptions and show insufficient evidence until enough reliable answers exist.
+- Convert legacy `.ppt` files to `.pptx` with LibreOffice before extracting and validating slide provenance.
 
-See [Course tutor and citations](docs/TUTOR.md), [Course knowledge and retrieval](docs/KNOWLEDGE.md), [Model and processing configuration](docs/FOUNDATION.md) and [Course setup and API](docs/COURSES.md) for the new workflow and its boundaries.
+See [Course tutor and citations](docs/TUTOR.md), [Course knowledge and retrieval](docs/KNOWLEDGE.md), [Model and processing configuration](docs/FOUNDATION.md), [Course setup and API](docs/COURSES.md), and [Track D submission status](docs/HACKATHON_TRACK_D_STATUS.md) for the workflow, evaluation, and release gates.
 
 The existing recording workflow also supports:
 
@@ -29,7 +32,7 @@ The existing recording workflow also supports:
 - Show coarse persisted progress, stage timings, observed system-memory use, browser connectivity, and local runtime readiness.
 - Start an attributed built-in demo and use the browser print dialog for PDF output.
 
-This build omits unified course revision packs, verified assessment banks, adaptive assessments/mastery dashboards, diarisation, accounts, cloud sync, and native packaging.
+The MVP and deterministic multi-session saved-attempt simulation are implemented. Remaining hackathon work is live semantic retrieval and tutor evaluation, model-generated question-quality measurement, full configured-provider/browser integration, and recording/publishing the demo and Devpost submission. Diarisation, accounts, cloud sync, and native packaging are outside the current MVP.
 
 ## Prerequisites
 
@@ -39,7 +42,7 @@ This build omits unified course revision packs, verified assessment banks, adapt
 - A locally built whisper.cpp CLI and `ggml-base.en.bin`
 - Optional for NVIDIA GPUs: Faster Whisper, CUDA cuBLAS/cuDNN runtime libraries, and a prepared `turbo` model
 - A Cerebras API key for cloud generation and document vision, or LM Studio with Qwen 3.5 4B for local text generation
-- LibreOffice for PPTX rendering; PDF processing uses the Python dependencies
+- LibreOffice for PPT/PPTX conversion and rendering; PDF processing uses the Python dependencies
 
 Normal app startup, health checks, and lecture processing never download a model. Prepare native tools and models while online, then use the local recording workflow without Wi-Fi.
 

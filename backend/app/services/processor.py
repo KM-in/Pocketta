@@ -308,6 +308,56 @@ class LectureProcessor:
             store = CourseStore(self.database)
             store.attach_lecture(lecture_id)
             mapping = store.sync_lecture_units(lecture_id)
+            source_path = Path(self.database.get_source_path(lecture_id) or "")
+            video_extensions = {".mp4", ".mkv", ".mov", ".webm"}
+            if (
+                not item.generation_only
+                and self.settings.model_provider == "cerebras"
+                and source_path.suffix.lower() in video_extensions
+            ):
+                frames = await self.blocking(
+                    self.media.extract_video_frames,
+                    lecture_id,
+                    source_path,
+                    self.settings.lectures_dir / lecture_id / "frames",
+                    transcript.duration_ms,
+                )
+                frame_gateway = ModelGateway(
+                    self.settings,
+                    self.database,
+                    lecture_id,
+                    coordinator=self.lm_studio.coordinator,
+                )
+                for offset_ms, image_path in frames:
+                    location = f"time:{offset_ms}-{offset_ms}:frame-{offset_ms}"
+                    unit_id = store.save_unit(
+                        lecture_id, location, "", "", str(image_path)
+                    )
+                    try:
+                        visual = await frame_gateway.analyse_image(
+                            image_path,
+                            "Describe only visually clear educational content in this video frame. "
+                            "Transcribe readable labels and explain diagrams without adding facts not visible. "
+                            "Set uncertain when text or a material detail is unclear.",
+                        )
+                        description = "\n".join(
+                            part for part in (visual.transcription, visual.description) if part
+                        )
+                        uncertain = visual.uncertain or not description.strip()
+                        saved_vision = visual.model_dump()
+                    except Exception:
+                        description, uncertain = "", True
+                        saved_vision = {
+                            "transcription": "",
+                            "description": "",
+                            "uncertain": True,
+                            "analysis_unavailable": True,
+                        }
+                    with self.database._connect() as c:
+                        c.execute(
+                            "UPDATE content_units SET text=?,vision_json=?,uncertain=? WHERE id=?",
+                            (description, json.dumps(saved_vision), uncertain, unit_id),
+                        )
             await self.knowledge.index_source(lecture_id)
             self._check(lecture_id)
             grounded = transcript.model_copy(deep=True)

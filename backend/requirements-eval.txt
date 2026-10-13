@@ -1,0 +1,2 @@
+# Optional Track D judge-based evaluation tools; keep out of runtime installs.
+deepeval==4.2.0

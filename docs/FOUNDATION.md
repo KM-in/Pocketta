@@ -1,6 +1,6 @@
 # Model and processing foundation
 
-PocketTA runs as one FastAPI process with SQLite. Uploading a source queues document extraction or recording processing. The [knowledge base](KNOWLEDGE.md) now indexes extracted sources and uses the embedding interface for semantic retrieval. Rubric grading remains an internal capability for later saved assessments.
+PocketTA runs as one FastAPI process with SQLite. Uploading a source queues document extraction or recording processing. The [knowledge base](KNOWLEDGE.md) indexes extracted sources and uses the embedding interface for semantic retrieval. Verified course assessments persist attempts and observations; the learner model replays reliable observations using the documented BKT assumptions in [multi-source assessment](MULTI_SOURCE.md).
 
 ## Provider configuration
 
@@ -76,8 +76,8 @@ Run `.venv/bin/python -m pytest`, then `npm test` and `npm run build` in `fronte
 
 With configured credentials and models, manually:
 
-1. Upload a PDF and PPTX plus a recording across two courses. Confirm upload bytes progress, separate processing progress, cancellation, and queued restart recovery.
+1. Upload a PDF, legacy PPT/PPTX, and a recording across two courses. Confirm upload bytes progress, separate processing progress, cancellation, and queued restart recovery.
 2. Generate a study pack using Cerebras, then LM Studio. Confirm citations still resolve to saved evidence locations.
 3. In an async Python session, initialize `Database` and `CourseStore`, then call `ModelGateway.embed(["A process executes a program."])`. Confirm a vector and a validated OpenAI model-run record.
 4. Call `generate_structured` with `role="verification"` and `grade_answer` with a known rubric/evidence example. Confirm selected model names, bounded grades, citations, and usage/cost metadata.
-5. With real LibreOffice installed, confirm PPTX slide rendering and provenance. Do not claim this native integration is verified by mocked tests alone.
+5. With real LibreOffice installed, confirm legacy PPT conversion, PPT/PPTX slide rendering, and provenance. Do not claim this native integration is verified by mocked tests alone.

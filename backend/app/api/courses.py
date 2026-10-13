@@ -111,7 +111,7 @@ async def upload_source(
     require_course(request, id)
     name = Path(file.filename or "source").name
     suffix = Path(name).suffix.lower()
-    if suffix not in (".pdf", ".pptx"):
+    if suffix not in (".pdf", ".pptx", ".ppt"):
         lecture = await upload_lecture(request, file, title, id)
         return public_source(require_source(request, lecture.id))
     if title is not None and (not title.strip() or len(title.strip()) > 200):
@@ -229,13 +229,13 @@ async def delete_source(request: Request, id: str):
 def asset(request: Request, id: str):
     source = require_source(request, id)
     path = Path(request.app.state.courses.path(id))
-    if source["type"] == "pptx":
+    if source["type"] in ("pptx", "ppt"):
         path = path.with_suffix(".pdf")
     if not path.is_file():
         raise HTTPException(404, "Source preview is not available yet")
     return FileResponse(
         path,
-        media_type="application/pdf" if source["type"] in ("pdf", "pptx") else None,
+        media_type="application/pdf" if source["type"] in ("pdf", "pptx", "ppt") else None,
     )
 
 

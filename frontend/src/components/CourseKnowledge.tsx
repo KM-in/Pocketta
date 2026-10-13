@@ -6,6 +6,7 @@ import { request } from "../api/client";
 interface Evidence {
   chunk_id: string; content_unit_id: string; source_id: string; source_name: string;
   source_version: number; excerpt: string;
+  visual_url?: string | null;
   citation: { page_no?: number | null; slide_no?: number | null; start_sec?: number | null; end_sec?: number | null };
 }
 interface Bundle { items: Evidence[]; coverage: string; retrieval_mode: string; warnings: string[] }
@@ -46,6 +47,7 @@ export function CourseKnowledge({ courseId, sourceIds = [] }: { courseId: string
       {result.items.map(item => <article className="content-card" key={item.chunk_id}>
         <Link to={citationHref(courseId, item)}>{item.source_name} · {label(item)}</Link>
         <p className="extracted-text">{item.excerpt}</p>
+        {item.visual_url && <img className="course-evidence-image" src={`${import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api"}${item.visual_url}`} alt={`Visual evidence from ${item.source_name} at ${label(item)}`} loading="lazy" />}
       </article>)}
     </div>}
   </section>;

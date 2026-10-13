@@ -2,7 +2,7 @@
 
 Create a course, then add a PDF, PPTX, audio/video recording, or browser/microphone recording. Existing recordings are registered under **Imported lectures** without changing their IDs, files, transcripts, or saved packs. Empty installations start with no courses.
 
-Document uploads extract and save content first. Once extraction is ready, choose **Generate study pack**. Recording uploads retain their automatic transcription and generation workflow. Study packs belong to one source; unified course packs, retrieval/chat, and mastery dashboards are deferred.
+Document uploads extract and save content first. Once extraction is ready, choose **Generate study pack**. Recording uploads retain their automatic transcription and generation workflow. Course workspaces support multi-source retrieval, cited tutor chat, verified quizzes, saved attempts, topic learning history, and optional syllabus mapping. PDF, PPTX, and legacy PPT files are accepted; PPT/PPTX slide citations require LibreOffice rendering, and the converted slide count is checked against extracted slide text.
 
 ## Setup
 
@@ -26,8 +26,8 @@ For existing offline text workflows, set `MODEL_PROVIDER=lm_studio` and configur
 
 ## Ingestion and evidence
 
-- Preserve original uploads under the configured data directory. The upload limit remains 200 MB; documents are additionally limited to 500 pages/slides by default. PDF and PPTX are supported; legacy `.ppt` is not.
-- Extract native text and render page images once. PPTX is converted to PDF in a separate LibreOffice profile per source, with a 120-second conversion timeout; rendered page count must match slide count.
+- Preserve original uploads under the configured data directory. The upload limit remains 200 MB; documents are additionally limited to 500 pages/slides by default. PDF, PPTX, and legacy `.ppt` are supported.
+- Extract native text and render page images once. Legacy PPT converts to PPTX, then PowerPoint files convert to PDF in a separate LibreOffice profile per source, with a 120-second conversion timeout; rendered page count must match slide count.
 - Select vision when native text has fewer than 80 characters after trimming, image coverage reaches 15%, or local signals indicate charts/tables/diagrams (including substantial vector drawing). This is a heuristic, not perfect visual-content detection. Pages with ordinary text do not automatically incur vision calls.
 - Send one selected image per vision request, using a single document worker. Cache results by source version, image bytes, provider base URL, vision model, and prompt. Source files are immutable; replacing a file means uploading a new source.
 - Keep native text and vision output separately. Flag uncertain content and exclude it from confident generated evidence. Failed sources retain completed extraction so users can inspect it, retry extraction, or generate from available reliable units.
@@ -50,7 +50,7 @@ All paths have the `/api` prefix.
 | GET, DELETE | `/sources/{id}` | Source detail including content units and pack / permanent deletion |
 | GET | `/sources/{id}/status` | Persisted status, progress, error |
 | POST | `/sources/{id}/retry`, `/cancel`, `/generate` | Retry extraction, cancel, generate source pack |
-| GET | `/sources/{id}/asset` | Original PDF/recording or rendered PPTX PDF |
+| GET | `/sources/{id}/asset` | Original PDF/recording or rendered PPT/PPTX PDF |
 | GET | `/sources/{id}/units/{unit_id}/image` | Image constrained to that source |
 | GET | `/citations/{unit_id}` | Source/course IDs, excerpt, uncertainty, page/slide/timestamp location |
 | GET | `/sources/{id}/export.md` | Source pack with resolved evidence links |

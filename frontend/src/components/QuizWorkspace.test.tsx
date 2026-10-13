@@ -42,7 +42,7 @@ it("separates the progress section and preserves backend learning observations",
   vi.stubGlobal("fetch", vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => url.endsWith("/quizzes") ? [quiz] : url.endsWith("/syllabus") ? syllabus : { ...learning, topics: [{ topic_id: "topic", title: "Concurrency", average: .6, mastered: false, weak: true, observations: [{ uncertain: true, score: .4, response: "My answer", answer: "Expected answer", explanation: "Source explanation", feedback: "Review the evidence" }] }] } })));
   render(<MemoryRouter><QuizWorkspace courseId="course" sourceIds={[]} sources={[]} view="progress" /></MemoryRouter>);
   expect(await screen.findByText("Review recommended")).toBeInTheDocument();
-  expect(screen.getByText("60% average across recorded observations")).toBeInTheDocument();
+  expect(screen.getByText(/60% average across recorded observations/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Start / retake" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByText("Review 1 observations"));
   expect(screen.getByText("Uncertain grade — review the evidence")).toBeInTheDocument();

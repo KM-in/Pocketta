@@ -1,4 +1,5 @@
 import json
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -14,7 +15,8 @@ class QuizInput(BaseModel):
     source_ids: list[str] = Field(min_length=1)
     question_count: int = Field(default=10, ge=1, le=50)
     mcq_count: int = Field(default=6, ge=0, le=50)
-    difficulty: str = Field(default="adaptive", max_length=40)
+    numerical_count: int = Field(default=0, ge=0, le=50)
+    difficulty: Literal["adaptive", "easy", "medium", "challenging"] = "adaptive"
     desired_topics: list[str] = Field(default_factory=list, max_length=30)
     excluded_topics: list[str] = Field(default_factory=list, max_length=30)
     instructions: str = Field(default="", max_length=3000)
@@ -91,6 +93,9 @@ async def retry_quiz(request: Request, course_id: str, quiz_id: str):
             question_count=opts.get("question_count", len(prior_questions)),
             mcq_count=opts.get(
                 "mcq_count", sum(q["kind"] == "mcq" for q in prior_questions)
+            ),
+            numerical_count=opts.get(
+                "numerical_count", sum(q["kind"] == "numerical" for q in prior_questions)
             ),
             difficulty=opts.get("difficulty", "adaptive"),
             desired_topics=opts.get("desired_topics", []),

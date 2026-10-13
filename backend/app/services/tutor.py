@@ -140,6 +140,44 @@ class TutorService:
                     "Course evidence changed. Rebuild the source index and ask again."
                 )
 
+    def learner_guidance(self, course_id, bundle):
+        chunk_ids = list(dict.fromkeys(item.chunk_id for item in bundle.items))
+        if not chunk_ids:
+            return []
+        marks = ",".join("?" for _ in chunk_ids)
+        with self.db._connect() as c:
+            topics = [
+                row["name"]
+                for row in c.execute(
+                    f"""SELECT DISTINCT t.name FROM chunk_topics ct
+                    JOIN topics t ON t.id=ct.topic_id WHERE ct.chunk_id IN ({marks})
+                    AND t.course_id=? ORDER BY t.name LIMIT 8""",
+                    (*chunk_ids, course_id),
+                )
+            ]
+        if not topics:
+            return []
+        from .quizzes import QuizService
+
+        profile = {
+            item["title"].casefold(): item
+            for item in QuizService(self.settings, self.store, self.knowledge)._profile(course_id)
+        }
+        guidance = []
+        for title in topics:
+            item = profile.get(title.casefold())
+            if not item or item["confident_count"] < 3:
+                guidance.append({"topic": title, "state": "insufficient evidence"})
+            else:
+                guidance.append(
+                    {
+                        "topic": title,
+                        "state": "review recommended" if item["weak"] else "sufficient evidence",
+                        "recent_mistakes": item["recent_mistakes"],
+                    }
+                )
+        return guidance
+
     async def ask(self, course_id, question, intent: Intent):
         # Include the previous subject for follow-up questions, but never treat history as evidence.
         history = self.history(course_id)[-4:]
@@ -147,6 +185,7 @@ class TutorService:
         if history and len(question.split()) < 9:
             query += " " + history[-1]["question"]
         bundle = await self.knowledge.retrieve(course_id, query)
+        learner_guidance = self.learner_guidance(course_id, bundle)
         draft = None
         verification = None
         status = "unsupported"
@@ -160,12 +199,15 @@ class TutorService:
                     "and claims=[] and check=null. Follow intent: explain simply, give an evidence-supported example, "
                     "compare supported concepts, or test understanding. For check intent ONLY, include one short-answer "
                     "question with a specific expected answer and rubric supported by citations. Do not reveal its answer "
-                    "in claims. For other intents check=null. Avoid unsupported examples or extrapolation.\n"
+                    "in claims. For other intents check=null. Avoid unsupported examples or extrapolation. "
+                    "Use learner history only to adjust explanation depth and choose grounded examples; do not treat it "
+                    "as source evidence or claim that ordinary chat updated mastery.\n"
                     + json.dumps(
                         {
                             "question": question,
                             "intent": intent,
                             "previous_questions": [h["question"] for h in history],
+                            "learner_guidance": learner_guidance,
                             "evidence": bundle.model_dump(),
                         }
                     ),
@@ -335,6 +377,18 @@ class TutorService:
             # Ordinary tutor answers never enter this history.
             from .quizzes import topic_id
 
+            check_chunks = list(dict.fromkeys(check.chunk_ids))
+            placeholders = ",".join("?" for _ in check_chunks)
+            topic_row = c.execute(
+                f"""SELECT t.name,COUNT(*) evidence_count FROM chunk_topics ct
+                JOIN topics t ON t.id=ct.topic_id
+                WHERE ct.chunk_id IN ({placeholders}) AND t.course_id=?
+                GROUP BY t.name ORDER BY evidence_count DESC,t.name LIMIT 1""",
+                (*check_chunks, course_id),
+            ).fetchone()
+            topic_title = topic_row["name"] if topic_row else "Tutor understanding checks"
+            stable_topic_id = topic_id(topic_title)
+
             c.execute(
                 """INSERT OR IGNORE INTO topic_observations(
                 id,course_id,topic_id,topic_title,quiz_id,attempt_id,question_id,
@@ -343,8 +397,8 @@ class TutorService:
                 (
                     str(uuid.uuid4()),
                     course_id,
-                    topic_id(check.question),
-                    check.question,
+                    stable_topic_id,
+                    topic_title,
                     f"tutor:{turn_id}",
                     None,
                     turn_id,
@@ -363,7 +417,7 @@ class TutorService:
                 (
                     datetime.now(UTC).isoformat(),
                     datetime.now(UTC).isoformat(),
-                    topic_id(check.question),
+                    stable_topic_id,
                     course_id,
                 ),
             )

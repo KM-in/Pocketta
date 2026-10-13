@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
+import shutil
 
 from ..config import Settings
 from .processes import ProcessRegistry
@@ -81,6 +82,46 @@ class MediaService:
             if duration_ms is not None:
                 candidates.append(duration_ms)
         return max(candidates) if candidates else None
+
+    def extract_video_frames(
+        self, lecture_id: str, media: Path, output_dir: Path, duration_ms: int
+    ) -> list[tuple[int, Path]]:
+        """Sample up to 20 evenly spaced frames from a video, retaining millisecond offsets."""
+        probe = self.processes.run(
+            lecture_id,
+            [
+                self.settings.ffprobe_path,
+                "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=index", "-of", "json", str(media),
+            ],
+        )
+        if not json.loads(probe).get("streams"):
+            return []
+        shutil.rmtree(output_dir, ignore_errors=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        count = min(20, max(1, math.ceil(duration_ms / 60_000)))
+        # Leave a full second at the end so low-frame-rate media still has a
+        # decodable frame at the final sample position.
+        final_offset = max(0, duration_ms - 1000)
+        if count == 1:
+            offsets = [0]
+        else:
+            offsets = [round(i * final_offset / (count - 1)) for i in range(count)]
+        frames = []
+        for offset in offsets:
+            output = output_dir / f"frame-{offset:010d}.png"
+            self.processes.run(
+                lecture_id,
+                [
+                    self.settings.ffmpeg_path, "-nostdin", "-y",
+                    "-ss", f"{offset / 1000:.3f}", "-i", str(media),
+                    "-frames:v", "1", "-vf", "scale=1280:-2", str(output),
+                ],
+                timeout=60,
+            )
+            if output.is_file() and output.stat().st_size:
+                frames.append((offset, output))
+        return frames
 
 
 def _duration_value_ms(value: object) -> int | None:

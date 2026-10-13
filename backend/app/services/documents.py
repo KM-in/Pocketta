@@ -215,16 +215,38 @@ class DocumentProcessor:
             self.store.update(id, "extracting", 5)
             slides = None
             pdf_path = path
-            if source["type"] == "pptx":
+            if source["type"] in {"pptx", "ppt"}:
                 if not self.settings.executable_available(
                     self.settings.libreoffice_path
                 ):
                     raise ValueError(
                         "Install LibreOffice and set LIBREOFFICE_PATH to soffice to render PPTX slides"
                     )
-                slides = await self.blocking(pptx_text, path)
+                slide_path = path
+                if source["type"] == "ppt":
+                    slide_path = path.with_suffix(".pptx")
+                    if not slide_path.exists():
+                        await self.blocking(
+                            self.processes.run,
+                            id,
+                            [
+                                self.settings.libreoffice_path,
+                                f'-env:UserInstallation={path.parent.joinpath("lo-profile").as_uri()}',
+                                "--headless",
+                                "--convert-to",
+                                "pptx",
+                                "--outdir",
+                                str(path.parent),
+                                str(path),
+                            ],
+                            None,
+                            120,
+                        )
+                    if not slide_path.is_file():
+                        raise ValueError("LibreOffice did not produce a PPTX conversion")
+                slides = await self.blocking(pptx_text, slide_path)
                 self.check(id)
-                pdf_path = path.with_suffix(".pdf")
+                pdf_path = slide_path.with_suffix(".pdf")
                 if not pdf_path.exists():
                     await self.blocking(
                         self.processes.run,
@@ -237,7 +259,7 @@ class DocumentProcessor:
                             "pdf",
                             "--outdir",
                             str(path.parent),
-                            str(path),
+                            str(slide_path),
                         ],
                         None,
                         120,

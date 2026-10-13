@@ -60,6 +60,10 @@ async def evaluate(live=False):
                 }
             ),
         )
+        if live and not config.embedding_enabled:
+            raise RuntimeError(
+                "Live embeddings were requested, but no embedding API key or local embedding endpoint is configured"
+            )
         db = Database(config.database_path)
         db.initialize()
         store = CourseStore(db)
