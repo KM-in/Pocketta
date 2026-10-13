@@ -1,6 +1,6 @@
 # Multimodal AI Hackathon 2026 · Track D status
 
-Reviewed on 13 October 2026 against the Track D brief. The work is published on GitHub `main` at `a5a9b90` (`Complete Track D hackathon submission work`). This status does not claim a live-provider evaluation or public demo.
+Reviewed on 14 October 2026 against the Track D brief. The work is published on the public GitHub `main` branch. This status does not claim a live-provider evaluation or public demo.
 
 ## Implemented in the prototype
 
@@ -22,8 +22,8 @@ Reviewed on 13 October 2026 against the Track D brief. The work is published on 
 - Test/setup gate: the project venv has its declared NumPy and optional DeepEval dependencies installed; `pip check` reports no broken requirements. The full backend suite passes with all 139 tests. In this restricted runner, `pytest -p no:rerunfailures` is needed because that optional plugin binds a localhost socket, which the sandbox denies. On latest `main`, frontend verification passes with 46 tests and a production build.
 - The DeepEval adapter and evaluation dependency are isolated from runtime requirements. A live model run needs usable Cerebras inference credit; live semantic retrieval also needs an embedding API key or local endpoint.
 - Record a 3–10 minute YouTube demo with English audio or subtitles using the walkthrough in [the demo runbook](DEMO.md). Check signed-out access.
-- Add Devpost usernames for Kartik Mishra and Kartikeya Srivastava, then submit the completed [Devpost draft](DEVPOST_DRAFT.md) with the demo link.
+- The Devpost usernames are recorded in the [draft](DEVPOST_DRAFT.md). Add the demo link and submit the completed entry.
 
 ## Submission handoff
 
-The source repository is public and the submission work is published on `main` at `a5a9b90`. The demo video and Devpost submission are not present in this repository. Kartik Mishra and Kartikeya Srivastava are the supplied team member names; their Devpost usernames are still needed. Remaining gates include successful live-provider evaluation, real configured-flow checks, demo recording, and completing the Devpost entry. See the remaining verification gates above before describing the project as submission-ready.
+The source repository is public and the submission work is published on `main`. The team member names and Devpost usernames are recorded in the draft; the demo video and Devpost submission are not yet present. Remaining gates include successful live-provider evaluation, real configured-flow checks, demo recording, and completing the Devpost entry. See the remaining verification gates above before describing the project as submission-ready.

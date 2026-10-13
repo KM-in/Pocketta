@@ -1,12 +1,12 @@
 # Devpost draft — PocketTA
 
-**Status:** Draft only. Replace the team fields and add the recorded demo URL before submission. Verify every claim against the final deployed build.
+**Status:** Draft only. Add the recorded demo URL before submission. Verify every claim against the final deployed build.
 
 ## Project details
 
 - **Project name:** PocketTA
 - **Track:** D — Personalized Tutoring & Adaptive Learning
-- **Team members and Devpost accounts:** Kartik Mishra (Devpost username pending); Kartikeya Srivastava (Devpost username pending)
+- **Team members and Devpost accounts:** Kartik Mishra (`mishrakartik2007`); Kartikeya Srivastava (`kartik-sri769`)
 - **Demo video (3–10 minutes):** Pending recording; no video has been recorded yet
 - **Source repository:** https://github.com/KM-in/pocketta-local
 
@@ -48,7 +48,7 @@ Record a 3–10 minute walkthrough showing: upload and processing of course sour
 
 ## Submission checklist
 
-- [ ] Add the Devpost usernames for Kartik Mishra and Kartikeya Srivastava.
+- [x] Add the Devpost usernames for Kartik Mishra and Kartikeya Srivastava.
 - [ ] Record and review the demo; verify the link works signed out.
 - [x] Backend dependencies verified (`pip check` clean), all 139 backend tests pass, 46 frontend tests pass on latest `main`, and the production build succeeds.
 - [ ] Validate the configured provider flow, real legacy PPT conversion, and video timestamp navigation.
