@@ -24,7 +24,7 @@ it("disables generation without a selection and explains stale packs", async () 
   vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => [{ ...pack, status: "stale" }] })));
   render(<MemoryRouter><CoursePacks courseId="course" sourceIds={[]} revision={0} /></MemoryRouter>);
   expect(screen.getByRole("button", { name: "Generate course study pack" })).toBeDisabled();
-  expect(await screen.findByRole("status")).toHaveTextContent("Source material changed");
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Source material changed"));
 });
 it("offers cancellation and progress for running packs", async () => {
   const fetch = vi.fn(async (_url: string, init?: RequestInit) => ({ ok: true, status: 200, json: async () => init?.method === "POST" ? pack : [{ ...pack, status: "generating", progress: 40 }] }));

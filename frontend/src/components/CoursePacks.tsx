@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EmptyState, Icon } from "./WorkspaceUI";
 import { Link } from "react-router-dom";
 import { request } from "../api/client";
 import { citationHref, citationLabel, type TutorEvidence } from "./CourseTutor";
@@ -16,6 +17,7 @@ const active = new Set(["queued", "indexing", "planning", "generating", "assembl
 const post = (body?: unknown) => ({ method: "POST", headers: { "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) });
 
 export function CoursePacks({ courseId, sourceIds, revision }: { courseId: string; sourceIds: string[]; revision: number }) {
+  const [loading, setLoading] = useState(true);
   const [packs, setPacks] = useState<Pack[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,6 +32,7 @@ export function CoursePacks({ courseId, sourceIds, revision }: { courseId: strin
         setPacks(result);
         if (result.some(p => active.has(p.status))) timer = setTimeout(() => void load(), 1500);
       } catch (cause) { if (!cancelled) setError(cause instanceof Error ? cause.message : "Could not load course packs"); }
+      finally { if (!cancelled) setLoading(false); }
     };
     void load();
     return () => { cancelled = true; clearTimeout(timer); };
@@ -40,13 +43,13 @@ export function CoursePacks({ courseId, sourceIds, revision }: { courseId: strin
     catch (cause) { setError(cause instanceof Error ? cause.message : "Course pack action failed"); }
     finally { setBusy(false); }
   }
-  return <section className="setup-card" aria-label="Course study packs">
-    <h2>Course study packs</h2>
-    <p>Combine selected sources into verified topic sections, flashcards, and quizzes. {sourceIds.length} sources selected.</p>
-    <button className="button" disabled={busy || !sourceIds.length} onClick={() => void act(`/courses/${courseId}/study-packs`, { source_ids: sourceIds })}>Generate course study pack</button>
+  return <section className="course-packs" aria-label="Course study packs">
+    <div className="section-heading"><div><h2>Course study packs</h2><p className="muted">Verified notes, concepts, and flashcards from {sourceIds.length} selected sources.</p></div><button className="button" disabled={busy || !sourceIds.length} onClick={() => void act(`/courses/${courseId}/study-packs`, { source_ids: sourceIds })}><Icon name="book"/>Generate course study pack</button></div>
     {error && <p role="alert">{error}</p>}
-    {packs.map(pack => <details key={pack.id} className="content-card" open={active.has(pack.status) || pack.status === "stale"}>
-      <summary>{pack.title} · {pack.status.replaceAll("_", " ")}</summary>
+    {loading && <p role="status">Loading course study packs…</p>}
+    {!loading && !error && !packs.length && <EmptyState title="Bring the whole course into focus">Choose sources above and create one connected study pack. Every section links back to its original evidence.</EmptyState>}
+    {packs.map(pack => <details key={pack.id} className="content-card course-pack" open={active.has(pack.status) || pack.status === "stale"}>
+      <summary><span>{pack.title}</span><span className={`status ${pack.status}`}>{pack.status.replaceAll("_", " ")}</span></summary>
       {active.has(pack.status) && <><progress aria-label="Course pack progress" max={100} value={pack.progress} /><p>{pack.status} · {pack.progress}%</p><button className="button secondary" disabled={busy} onClick={() => void act(`/courses/${courseId}/study-packs/${pack.id}/cancel`)}>Cancel pack</button></>}
       {["failed", "cancelled"].includes(pack.status) && <button className="button secondary" disabled={busy} onClick={() => void act(`/courses/${courseId}/study-packs/${pack.id}/retry`)}>Retry pack</button>}
       {pack.status === "stale" && <p role="status">Source material changed. Select current sources and generate a new pack.</p>}
@@ -54,7 +57,7 @@ export function CoursePacks({ courseId, sourceIds, revision }: { courseId: strin
       {pack.status === "completed" && <p>{pack.quiz_id ? `Mixed quiz saved to the quiz library · ${pack.quiz_status ?? "ready"}` : `Mixed quiz · ${pack.quiz_status ?? "pending"}`}
         {pack.quiz_status === "failed" && <button className="text-button" disabled={busy} onClick={() => void act(`/courses/${courseId}/study-packs/${pack.id}/quiz/retry`)}>Retry mixed quiz</button>}</p>}
       {pack.status === "completed" && !pack.quiz_id && !pack.quiz_status && <button className="button secondary" disabled={busy} onClick={() => void act(`/courses/${courseId}/study-packs/${pack.id}/import-quizzes`)}>Import saved quiz items</button>}
-      {pack.quiz_id && <a className="text-button" href="#quiz-library">Open the mixed quiz in the quiz library ↓</a>}
+      {pack.quiz_id && <Link className="button secondary" to={`/courses/${courseId}/practice#quiz-${pack.quiz_id}`}>Open mixed quiz →</Link>}
       {pack.warnings.map(w => <p className="editing-note" key={w}>{w}</p>)}
       {pack.overview && <p>{pack.overview}</p>}
       {pack.overview_evidence?.map(e => <Link className="text-button" key={e.chunk_id} to={citationHref(courseId, e)}>{citationLabel(e)}</Link>)}
@@ -64,7 +67,7 @@ export function CoursePacks({ courseId, sourceIds, revision }: { courseId: strin
         {section.content.items.map((item, index) => <article className="content-card" key={`${item.kind}-${index}`}>
           <p className="eyebrow">{item.kind}</p><h4>{item.title}</h4>
           {item.kind === "quiz" ? <><ol>{item.options.map((option, i) => <li key={i}>{option}</li>)}</ol><details><summary>Show answer</summary><p>{item.correct_answer != null ? item.options[item.correct_answer] : ""}</p><p>{item.text}</p></details></> : item.kind === "flashcard" ? <details><summary>Show answer</summary><p>{item.text}</p></details> : <p>{item.text}</p>}
-          <div>{item.chunk_ids.map(id => { const e = section.evidence.find(e => e.chunk_id === id); return e ? <Link className="text-button" key={id} to={citationHref(courseId, e)}>{citationLabel(e)}</Link> : null; })}</div>
+          <div className="pack-evidence">{item.chunk_ids.map(id => { const e = section.evidence.find(e => e.chunk_id === id); return e ? <Link className="text-button" key={id} to={citationHref(courseId, e)}>{citationLabel(e)}</Link> : null; })}</div>
         </article>)}
       </section>)}
       <section aria-label="Source coverage"><h3>Source coverage</h3>

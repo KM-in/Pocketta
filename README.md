@@ -98,7 +98,7 @@ cd frontend
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. The readiness panel identifies any missing local prerequisite.
+Open the local URL printed by Vite (normally `http://127.0.0.1:5173`). Vite proxies `/api` requests to the backend on `127.0.0.1:8000`, including when the frontend uses a fallback port such as 5174. The same proxy is configured for `vite preview`. A custom frontend deployment can override the API base using `VITE_API_BASE_URL`. The readiness panel identifies any missing local prerequisite.
 
 For YouTube or other tab audio, use a Chromium-based browser such as Chrome or Edge. Choose **Record browser tab audio**, select the browser tab in the share picker, and enable **Share tab audio**. Firefox and Safari do not currently expose compatible tab-audio capture for this workflow, so use file upload or microphone recording there.
 

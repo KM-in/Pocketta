@@ -6,7 +6,7 @@ interface Citation {
   target_id?: string; page_no?: number; slide_no?: number; start_sec?: number; end_sec?: number;
 }
 
-export function CitationFocus({ courseId, sourceId, assetUrl, recording }: { courseId: string; sourceId: string; assetUrl: string; recording: boolean }) {
+export function CitationFocus({ courseId, sourceId, assetUrl, recording, previews = {} }: { previews?: Record<string, string | null>; courseId: string; sourceId: string; assetUrl: string; recording: boolean }) {
   const [params] = useSearchParams();
   const navigationKey = useLocation().key;
   const unit = params.get("citation");
@@ -16,6 +16,7 @@ export function CitationFocus({ courseId, sourceId, assetUrl, recording }: { cou
   useEffect(() => {
     let cancelled = false;
     setCitation(null); setError("");
+    let highlighted: HTMLElement | null = null;
     if (unit) void request<Citation>(`/courses/${encodeURIComponent(courseId)}/citations/${encodeURIComponent(unit)}${version ? `?version=${encodeURIComponent(version)}` : ""}`)
       .then(result => {
         if (cancelled) return;
@@ -23,10 +24,10 @@ export function CitationFocus({ courseId, sourceId, assetUrl, recording }: { cou
         setCitation(result);
         // The transcript uses legacy segment IDs. Documents use content-unit IDs.
         const element = document.getElementById(unit) ?? document.getElementById(result.target_id ?? "");
-        element?.scrollIntoView?.({ behavior: "smooth", block: "center" });
-        if (element instanceof HTMLElement) element.focus();
+        element?.scrollIntoView?.({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+        if (element instanceof HTMLElement) { element.focus({ preventScroll: true }); element.classList.add("citation-target"); highlighted = element; }
       }).catch(cause => { if (!cancelled) setError(cause instanceof Error ? cause.message : "Citation unavailable"); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; highlighted?.classList.remove("citation-target"); };
   }, [courseId, sourceId, unit, version, navigationKey]);
   const mediaUrl = API_BASE + assetUrl;
   if (error) return <p role="alert">{error}</p>;
@@ -40,6 +41,6 @@ export function CitationFocus({ courseId, sourceId, assetUrl, recording }: { cou
   return <section className="setup-card" aria-label="Cited document page">
     <h3>{citation.source_name} · {citation.slide_no != null ? "slide" : "page"} {page}</h3>
     <a href={`${mediaUrl}#page=${page}`} target="_blank" rel="noreferrer">Open cited page in a new tab</a>
-    <iframe key={`${unit}-${version}`} title={`Cited page ${page}`} src={`${mediaUrl}#page=${page}`} style={{ width: "100%", height: 560, border: 0 }} />
+    {citation.slide_no != null && previews[citation.content_unit_id] ? <img className="cited-slide" src={API_BASE + previews[citation.content_unit_id]} alt={`Cited slide ${page}`} /> : <iframe key={`${unit}-${version}`} title={`Cited page ${page}`} src={`${mediaUrl}#page=${page}`} style={{ width: "100%", height: 560, border: 0 }} />}
   </section>;
 }

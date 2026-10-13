@@ -26,6 +26,23 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("Course workspace", () => {
+  it("keeps selected sources when opening the course-pack section", async () => {
+    window.history.replaceState({}, "", "/courses/a/sources");
+    render(<CourseWorkspace />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Select Chapter one" }));
+    fireEvent.click(screen.getByRole("link", { name: "Create study pack" }));
+    expect(await screen.findByRole("button", { name: "Generate course study pack" })).toBeEnabled();
+    expect(screen.getByText("Verified notes, concepts, and flashcards from 1 selected sources.")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/courses/a/packs");
+  });
+  it("distinguishes a connection failure from an empty course and permits retry", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Load failed"));
+    render(<CourseWorkspace />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Cannot connect to the PocketTA backend");
+    expect(screen.queryByText("Start with your first course")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry connection" }));
+    expect(await screen.findByRole("heading", { name: "Operating systems" })).toBeInTheDocument();
+  });
   it("limits batch uploads to two concurrent transfers and keeps the course route", async () => {
     window.history.replaceState({}, "", "/courses/a");
     const transfers: Array<{ status: number; responseText: string; upload: Record<string, unknown>; onload: null | (() => void); open: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> }> = [];
@@ -45,7 +62,7 @@ describe("Course workspace", () => {
   });
   it("allows creating a course without engine readiness", async () => {
     render(<CourseWorkspace />);
-    await screen.findByText("Operating systems");
+    await screen.findByRole("heading", { name: "Operating systems" });
     fireEvent.click(screen.getByRole("button", { name: /New course/ }));
     fireEvent.change(screen.getByLabelText("Course title"), { target: { value: "Algorithms" } });
     fireEvent.click(screen.getByRole("button", { name: "Save course" }));

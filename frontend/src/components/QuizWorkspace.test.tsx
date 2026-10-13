@@ -37,3 +37,28 @@ it("keeps answer keys hidden during an attempt and reveals feedback after gradin
   expect(screen.getByText(/Score: 100%/)).toBeInTheDocument();
   await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/submit"), expect.objectContaining({ method: "POST" })));
 });
+
+it("separates the progress section and preserves backend learning observations", async () => {
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => url.endsWith("/quizzes") ? [quiz] : url.endsWith("/syllabus") ? syllabus : { ...learning, topics: [{ topic_id: "topic", title: "Concurrency", average: .6, mastered: false, weak: true, observations: [{ uncertain: true, score: .4, response: "My answer", answer: "Expected answer", explanation: "Source explanation", feedback: "Review the evidence" }] }] } })));
+  render(<MemoryRouter><QuizWorkspace courseId="course" sourceIds={[]} sources={[]} view="progress" /></MemoryRouter>);
+  expect(await screen.findByText("Review recommended")).toBeInTheDocument();
+  expect(screen.getByText("60% average across recorded observations")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Start / retake" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText("Review 1 observations"));
+  expect(screen.getByText("Uncertain grade — review the evidence")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Download user_learning.md" })).toHaveAttribute("href", `${window.location.origin}/api/courses/course/learning/user_learning.md`);
+});
+
+it("autosaves answers and shows the saved status during a practice attempt", async () => {
+  const fetch = vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => url.endsWith("/quizzes") ? [quiz] : url.endsWith("/learning") ? learning : url.endsWith("/syllabus") ? syllabus : attempt }));
+  vi.stubGlobal("fetch", fetch);
+  render(<MemoryRouter><QuizWorkspace courseId="course" sourceIds={["s1"]} sources={[]} view="practice" /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole("button", { name: "Start / retake" }));
+  fireEvent.click(await screen.findByLabelText("A"));
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/answers"), expect.objectContaining({ method: "PUT", body: JSON.stringify({ answers: { q1: "A" } }) })));
+  expect(await screen.findByText("All answers saved")).toBeInTheDocument();
+  expect(screen.getByLabelText("Quiz answers completed")).toHaveAttribute("value", "1");
+  fireEvent.click(screen.getByRole("button", { name: "Back to quiz library" }));
+  expect(await screen.findByRole("button", { name: "Start / retake" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Back to quiz library" })).not.toBeInTheDocument();
+});

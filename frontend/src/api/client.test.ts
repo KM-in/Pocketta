@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { uploadRequest, api } from "./client";
+import { uploadRequest, api, request } from "./client";
 
 function fakeUpload() {
   const xhr = {
@@ -53,5 +53,23 @@ describe("upload transport", () => {
     expect(body.get("title")).toBe("Lecture");
     xhr.onload?.();
     await pending;
+  });
+});
+
+describe("API connection failures", () => {
+  it("explains browser network failures and preserves their cause", async () => {
+    const cause = new TypeError("Load failed");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(cause));
+    const failure = await request("/courses").catch(error => error);
+    expect(failure).toBeInstanceOf(Error);
+    if (!(failure instanceof Error)) throw new Error("Expected a connection error");
+    expect(failure.message).toContain("Cannot connect to the PocketTA backend");
+    expect(failure.cause).toBe(cause);
+  });
+  it("uses the frontend origin for default API requests", async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    vi.stubGlobal("fetch", fetch);
+    await request("/courses");
+    expect(fetch).toHaveBeenCalledWith(`${window.location.origin}/api/courses`, undefined);
   });
 });
