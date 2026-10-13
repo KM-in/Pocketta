@@ -10,6 +10,7 @@ Install `backend/requirements-dev.txt` into `.venv`, and run `npm ci` in `fronte
 
 ```dotenv
 MODEL_PROVIDER=cerebras
+CEREBRAS_BASE_URL=https://api.cerebras.ai/v1
 CEREBRAS_API_KEY=your-server-side-key
 CEREBRAS_TEXT_MODEL=qwen-3.8-27b
 CEREBRAS_VISION_MODEL=qwen-3.8-27b
@@ -17,18 +18,18 @@ LIBREOFFICE_PATH=soffice
 MAX_DOCUMENT_PAGES=500
 ```
 
-Cerebras image inputs are currently a public-preview capability; your account must have access to the configured vision model. Model names are configurable. No credentials are embedded in the browser or committed to Git.
+For another OpenAI-compatible cloud provider, change `CEREBRAS_BASE_URL`, the API key, and model names. See [provider configuration](FOUNDATION.md#provider-configuration) for compatibility requirements and the token-limit field setting. Your account must have access to the configured vision model and image inputs. No credentials are embedded in the browser or committed to Git.
 
 Install LibreOffice separately for PPTX rendering. On macOS an application install usually exposes `/Applications/LibreOffice.app/Contents/MacOS/soffice`; on Windows use `C:/Program Files/LibreOffice/program/soffice.exe`. Set `LIBREOFFICE_PATH` accordingly. Missing LibreOffice fails only slide ingestion, with a readiness instruction. PDF extraction/rendering uses bundled PDFium through `pypdfium2` and does not require Poppler or Tesseract.
 
-For existing offline text workflows, set `MODEL_PROVIDER=lm_studio` and configure the existing LM Studio variables. The Settings default remains local for compatibility; the example environment selects Cerebras. Scans and visual documents require Cerebras mode; there is no silent cloud fallback. Recording transcription always uses the existing local Whisper/FFmpeg configuration.
+For existing offline text workflows, set `MODEL_PROVIDER=lm_studio` and configure the existing LM Studio variables. The Settings default remains local for compatibility; the example environment selects Cerebras. Scans and visual documents require cloud mode and a vision-capable model; there is no silent cloud fallback. Recording transcription always uses the existing local Whisper/FFmpeg configuration.
 
 ## Ingestion and evidence
 
 - Preserve original uploads under the configured data directory. The upload limit remains 200 MB; documents are additionally limited to 500 pages/slides by default. PDF and PPTX are supported; legacy `.ppt` is not.
 - Extract native text and render page images once. PPTX is converted to PDF in a separate LibreOffice profile per source, with a 120-second conversion timeout; rendered page count must match slide count.
 - Select vision when native text has fewer than 80 characters after trimming, image coverage reaches 15%, or local signals indicate charts/tables/diagrams (including substantial vector drawing). This is a heuristic, not perfect visual-content detection. Pages with ordinary text do not automatically incur vision calls.
-- Send one selected image per vision request, using a single document worker. Cache results by source version, image bytes, vision model, and prompt. Source files are immutable; replacing a file means uploading a new source.
+- Send one selected image per vision request, using a single document worker. Cache results by source version, image bytes, provider base URL, vision model, and prompt. Source files are immutable; replacing a file means uploading a new source.
 - Keep native text and vision output separately. Flag uncertain content and exclude it from confident generated evidence. Failed sources retain completed extraction so users can inspect it, retry extraction, or generate from available reliable units.
 - Persist stable UUID content-unit IDs before requesting a study pack. The model cites these IDs; the backend checks them against the evidence supplied and resolves them to source/location metadata. Invalid citations receive one repair attempt and then fail generation. This validates citation provenance, not semantic truth of every claim.
 - Legacy lecture APIs keep segment-based citations through a compatibility translation. Course source APIs expose `content_unit_ids`.

@@ -44,7 +44,7 @@ describe("Course workspace", () => {
     await waitFor(() => expect(unit.scrollIntoView).toHaveBeenCalled());
     expect(await screen.findByTitle("Cited page 2")).toHaveAttribute("src", expect.stringContaining("#page=2"));
     expect(screen.getByAltText("Original page 2")).toHaveAttribute("loading", "lazy");
-    expect(screen.getByText(/selected page images are sent to Cerebras/)).toBeInTheDocument();
+    expect(screen.getByText(/selected page images are sent to the configured cloud provider/)).toBeInTheDocument();
   });
   it("clears the source view when switching courses", async () => {
     window.history.replaceState({}, "", "/courses/a/sources/s");

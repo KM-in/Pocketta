@@ -122,7 +122,7 @@ function Workspace() {
         {courses.map(c => <Link className={`course-link ${c.id === courseId ? "selected" : ""}`} key={c.id} to={`/courses/${c.id}`}><strong>{c.title}</strong><small>{c.source_count ?? 0} sources</small></Link>)}
       </nav>
       <button className="button secondary" onClick={() => setSetup(!setup)}>Engine & storage</button>
-      <p className="course-privacy">{health?.components.cerebras ? "Cloud mode: relevant source text and selected page images are sent to Cerebras." : "Local text generation. Document vision requires Cerebras configuration."} Embeddings send supplied source text to OpenAI when enabled.</p>
+      <p className="course-privacy">{health?.components.cerebras ? "Cloud mode: relevant source text and selected page images are sent to the configured cloud provider." : "Local text generation. Document vision requires cloud provider configuration."} Embeddings send supplied source text to OpenAI when enabled.</p>
     </aside>
     <main className="workspace-main">
       {error && <div role="alert" className="error-banner">{error}<button className="text-button" onClick={refresh}>Retry connection</button></div>}

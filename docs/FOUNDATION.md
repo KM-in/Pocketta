@@ -9,7 +9,9 @@ Keep all credentials in the server environment or an ignored `.env` file:
 | Setting | Default | Purpose |
 |---|---|---|
 | `MODEL_PROVIDER` | `lm_studio` | Text provider: `lm_studio` or `cerebras` |
-| `CEREBRAS_API_KEY` | empty | Required for Cerebras text and document vision |
+| `CEREBRAS_BASE_URL` | `https://api.cerebras.ai/v1` | OpenAI-compatible cloud API root for text and document vision |
+| `CEREBRAS_API_KEY` | empty | Key for the configured cloud endpoint |
+| `CEREBRAS_COMPLETION_TOKEN_FIELD` | `max_completion_tokens` | Token-limit field; also accepts `max_tokens` |
 | `CEREBRAS_TEXT_MODEL`, `CEREBRAS_VISION_MODEL` | `qwen-3.8-27b` | Cloud model selection |
 | `LM_STUDIO_MODEL_ID` | empty | Exact loaded local text model |
 | `OPENAI_API_KEY` | empty | Independent key for embedding calls |
@@ -21,9 +23,11 @@ Keep all credentials in the server environment or an ignored `.env` file:
 
 Existing `LM_STUDIO_TIMEOUT_SECONDS`, `LM_STUDIO_CHUNK_CHARS`, and `LM_STUDIO_CHUNK_OVERLAP_SEGMENTS` remain supported. An explicitly set `GENERATION_*` value takes precedence over its legacy counterpart. Do not set both unless migrating configuration deliberately.
 
+To use another cloud provider, keep `MODEL_PROVIDER=cerebras` (the existing cloud adapter name) and set `CEREBRAS_BASE_URL`, `CEREBRAS_API_KEY`, and the text/vision model IDs to that provider's values. Include the API version path in the base URL; PocketTA appends `/chat/completions` or `/models`. Trailing slashes are removed. Set `CEREBRAS_COMPLETION_TOKEN_FIELD=max_tokens` when required by the provider. Restart the backend after changing `.env`. The provider must support OpenAI-compatible chat completions and JSON-schema structured output; document vision additionally requires image inputs. Native APIs with different request/response formats need an adapter. Verifier and grader overrides use this same endpoint. Model-run records and token-rate keys retain the `cerebras` adapter name. OpenAI embeddings remain independently configured.
+
 `/api/health` shows embedding configuration and effective verifier/grader models. These are configuration checks, not proof of cloud connectivity or model access. Missing OpenAI credentials do not affect readiness for existing source processing.
 
-Cerebras receives generation excerpts and selected page/slide images. Knowledge indexing sends reliable source chunks to OpenAI when configured, and semantic search sends query text, including in local text mode. Transcription and storage remain local. Browser keys and client-side provider requests are never needed.
+The configured cloud provider receives generation excerpts and selected page/slide images. Knowledge indexing sends reliable source chunks to OpenAI when configured, and semantic search sends query text, including in local text mode. Transcription and storage remain local. Browser keys and client-side provider requests are never needed.
 
 ## Internal interfaces
 

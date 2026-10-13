@@ -32,9 +32,9 @@ def text_adapter(settings):
     if settings.model_provider == "cerebras":
         return ProviderAdapter(
             "cerebras",
-            "https://api.cerebras.ai/v1",
+            settings.cerebras_base_url,
             settings.cerebras_api_key,
-            "max_completion_tokens",
+            settings.cerebras_completion_token_field,
         )
     return ProviderAdapter(
         "lm_studio", settings.lm_studio_base_url, settings.lm_studio_api_key

@@ -1,6 +1,6 @@
 # PocketTA
 
-PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, extracts citable content, generates source-level study packs, and provides a cited course tutor. React, FastAPI, SQLite, and recording transcription run locally. Select Cerebras for cloud text and vision processing, or LM Studio for local text generation. The application binds to loopback addresses.
+PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, extracts citable content, generates source-level study packs, and provides a cited course tutor. React, FastAPI, SQLite, and recording transcription run locally. Select an OpenAI-compatible cloud endpoint (Cerebras by default) for text and vision processing, or LM Studio for local text generation. The application binds to loopback addresses.
 
 ## What works
 
@@ -57,7 +57,7 @@ Windows PowerShell:
 ./scripts/bootstrap.ps1 -Clean
 ```
 
-Copy `.env.example` to `.env`. For cloud mode, set `MODEL_PROVIDER=cerebras` and `CEREBRAS_API_KEY`; configure `LIBREOFFICE_PATH` for slides. For local text mode, set `MODEL_PROVIDER=lm_studio`. In LM Studio, load Qwen with a context length of at least 16K and start the local server on `127.0.0.1:1234`. Obtain the exact identifier from:
+Copy `.env.example` to `.env`. For cloud mode, set `MODEL_PROVIDER=cerebras` and `CEREBRAS_API_KEY`. To use another OpenAI-compatible provider, set `CEREBRAS_BASE_URL` to its API root (including the version path) and configure `CEREBRAS_TEXT_MODEL` and `CEREBRAS_VISION_MODEL` with its model IDs. Set `CEREBRAS_COMPLETION_TOKEN_FIELD=max_tokens` if required; the default is `max_completion_tokens`. The endpoint must support JSON-schema structured output and, for document vision, image inputs. Restart the backend after changing configuration. Configure `LIBREOFFICE_PATH` for slides. For local text mode, set `MODEL_PROVIDER=lm_studio`. In LM Studio, load Qwen with a context length of at least 16K and start the local server on `127.0.0.1:1234`. Obtain the exact identifier from:
 
 ```bash
 curl http://127.0.0.1:1234/v1/models

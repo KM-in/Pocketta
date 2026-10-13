@@ -16,7 +16,11 @@ class Settings(BaseSettings):
     )
 
     model_provider: Literal["lm_studio", "cerebras"] = "lm_studio"
+    cerebras_base_url: str = "https://api.cerebras.ai/v1"
     cerebras_api_key: str = ""
+    cerebras_completion_token_field: Literal["max_tokens", "max_completion_tokens"] = (
+        "max_completion_tokens"
+    )
     cerebras_text_model: str = "qwen-3.8-27b"
     cerebras_vision_model: str = "qwen-3.8-27b"
     openai_api_key: str = ""
@@ -111,6 +115,24 @@ class Settings(BaseSettings):
         if value == "":
             return None
         return value
+
+    @field_validator("cerebras_base_url")
+    @classmethod
+    def cloud_base_url_must_be_http(cls, value: str) -> str:
+        value = value.strip()
+        parsed = urlparse(value)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError(
+                "Cloud base URL must be an HTTP(S) URL without credentials, query, or fragment"
+            )
+        return value.rstrip("/")
 
     @field_validator("lm_studio_base_url")
     @classmethod

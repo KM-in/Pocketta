@@ -175,6 +175,16 @@ async def test_scan_vision_cache_and_stable_ids(store, tmp_path, monkeypatch):
     assert before[0]["native_text"] == ""
     assert json.loads(before[0]["vision_json"])["cache_key"]
 
+    worker.settings.cerebras_base_url = "https://inference.example/v1"
+    await worker.process(id, False)
+    after = store.units(id)
+    assert vision.await_count == 2
+    assert before[0]["id"] == after[0]["id"]
+    assert (
+        json.loads(before[0]["vision_json"])["cache_key"]
+        != json.loads(after[0]["vision_json"])["cache_key"]
+    )
+
 
 @pytest.mark.asyncio
 async def test_generation_rejects_foreign_and_invented_ids(

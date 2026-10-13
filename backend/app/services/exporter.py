@@ -19,7 +19,7 @@ def render_markdown(lecture: LectureDetail, model_provider: str = "lm_studio") -
         f"- **Duration:** {_duration(lecture.transcript.duration_ms)}",
         f"- **Created:** {lecture.created_at.isoformat()}",
         (
-            "- **Processing:** Generated with Cerebras cloud processing; recording transcription runs locally."
+            "- **Processing:** Generated with the configured cloud provider; recording transcription runs locally."
             if model_provider == "cerebras"
             else "- **Processing:** Generated locally with PocketTA; no cloud AI is required."
         ),

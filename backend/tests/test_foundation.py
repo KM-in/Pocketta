@@ -11,7 +11,7 @@ from backend.app.courses import CourseStore
 from backend.app.database import Database
 from backend.app.services.gateway import ModelGateway, GradingInput
 from backend.app.services.generation import GenerationError
-from backend.app.services.providers import RequestCoordinator
+from backend.app.services.providers import RequestCoordinator, text_adapter
 from backend.app.services.scheduler import CourseScheduler
 from backend.tests.test_models import transcript, study_pack
 
@@ -40,6 +40,102 @@ def settings(**kwargs):
 
 class Result(BaseModel):
     answer: str
+
+
+def test_cloud_endpoint_defaults_and_environment(monkeypatch):
+    adapter = text_adapter(settings(model_provider="cerebras"))
+    assert adapter.base_url == "https://api.cerebras.ai/v1"
+    assert adapter.completion_token_field == "max_completion_tokens"
+    monkeypatch.setenv("CEREBRAS_BASE_URL", " https://inference.example/api/v2/// ")
+    monkeypatch.setenv("CEREBRAS_COMPLETION_TOKEN_FIELD", "max_tokens")
+    adapter = text_adapter(settings(model_provider="cerebras"))
+    assert adapter.base_url == "https://inference.example/api/v2"
+    assert adapter.completion_token_field == "max_tokens"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "",
+        "inference.example/v1",
+        "ftp://inference.example/v1",
+        "https:///v1",
+        "https://user:secret@inference.example/v1",
+        "https://inference.example/v1?key=secret",
+        "https://inference.example/v1#fragment",
+    ],
+)
+def test_cloud_endpoint_rejects_invalid_base_urls(url):
+    with pytest.raises(ValidationError, match="Cloud base URL"):
+        settings(cerebras_base_url=url)
+
+
+@pytest.mark.parametrize("token_field", ["max_tokens", "max_completion_tokens"])
+@pytest.mark.asyncio
+async def test_custom_cloud_endpoint_for_models_text_roles_and_vision(
+    store, monkeypatch, tmp_path, token_field
+):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        assert request.headers["Authorization"] == "Bearer custom-key"
+        if request.method == "GET":
+            return httpx.Response(200, json={"data": [{"id": "custom-text"}]})
+        payload = json.loads(request.content)
+        assert payload[token_field] > 0
+        other_field = (
+            "max_tokens"
+            if token_field == "max_completion_tokens"
+            else "max_completion_tokens"
+        )
+        assert other_field not in payload
+        assert payload["response_format"]["type"] == "json_schema"
+        result = (
+            {"transcription": "Text", "description": "Diagram", "uncertain": False}
+            if payload["model"] == "custom-vision"
+            else {"answer": "Generated"}
+        )
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": json.dumps(result)}}]}
+        )
+
+    transport(monkeypatch, handler)
+    gateway = ModelGateway(
+        settings(
+            model_provider="cerebras",
+            cerebras_base_url="https://inference.example/api/v2/",
+            cerebras_api_key="custom-key",
+            cerebras_text_model="custom-text",
+            cerebras_vision_model="custom-vision",
+            cerebras_completion_token_field=token_field,
+            verifier_model="custom-verifier",
+            grader_model="custom-grader",
+        ),
+        store.db,
+    )
+    assert await gateway.available_models() == ["custom-text"]
+    for role in ("generation", "verification", "grading"):
+        assert await gateway.generate_structured("Prompt", Result, role=role) == {
+            "answer": "Generated"
+        }
+    image = tmp_path / "page.png"
+    image.write_bytes(b"test-image")
+    assert (await gateway.analyse_image(image, "Read this")).description == "Diagram"
+    assert [str(request.url) for request in requests] == [
+        "https://inference.example/api/v2/models",
+        *["https://inference.example/api/v2/chat/completions"] * 4,
+    ]
+    assert [json.loads(request.content)["model"] for request in requests[1:]] == [
+        "custom-text",
+        "custom-verifier",
+        "custom-grader",
+        "custom-vision",
+    ]
+    vision_payload = json.loads(requests[-1].content)
+    assert vision_payload["messages"][0]["content"][1]["image_url"]["url"].startswith(
+        "data:image/png;base64,"
+    )
 
 
 def test_settings_legacy_alias_and_neutral_precedence():

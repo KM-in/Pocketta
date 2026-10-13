@@ -270,6 +270,7 @@ class DocumentProcessor:
                     cache_key = hashlib.sha256(
                         (
                             str(source["version"])
+                            + self.settings.cerebras_base_url
                             + self.settings.cerebras_vision_model
                             + VISION_PROMPT
                         ).encode()
