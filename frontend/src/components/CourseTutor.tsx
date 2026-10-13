@@ -5,15 +5,30 @@ import { EvidenceContext, EvidenceLinks } from "./EvidenceLinks";
 
 export interface TutorEvidence {
   chunk_id: string; content_unit_id: string; source_id: string; source_name: string; source_version: number;
-  citation: { page_no?: number | null; slide_no?: number | null; start_sec?: number | null; end_sec?: number | null };
+  citation?: { page_no?: number | null; slide_no?: number | null; start_sec?: number | null; end_sec?: number | null };
+  location?: string;
 }
 export function citationHref(courseId: string, item: TutorEvidence) {
   return `/courses/${encodeURIComponent(courseId)}/sources/${encodeURIComponent(item.source_id)}?citation=${encodeURIComponent(item.content_unit_id)}&version=${item.source_version}`;
 }
 export function citationLabel(item: TutorEvidence) {
-  const c = item.citation;
-  const seconds = c.start_sec ?? 0;
-  return `${item.source_name} · ${c.page_no != null ? `page ${c.page_no}` : c.slide_no != null ? `slide ${c.slide_no}` : `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`}`;
+  const citation = item.citation;
+  if (citation) {
+    const seconds = citation.start_sec ?? 0;
+    return `${item.source_name} · ${citation.page_no != null ? `page ${citation.page_no}` : citation.slide_no != null ? `slide ${citation.slide_no}` : `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`}`;
+  }
+  const location = item.location;
+  if (location?.startsWith("page:") || location?.startsWith("slide:")) {
+    return `${item.source_name} · ${location.replace(":", " ")}`;
+  }
+  if (location?.startsWith("time:")) {
+    const milliseconds = Number(location.slice(5).split("-")[0]);
+    if (Number.isFinite(milliseconds)) {
+      const seconds = Math.floor(milliseconds / 1000);
+      return `${item.source_name} · ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+    }
+  }
+  return item.source_name;
 }
 interface Turn {
   id: string; question: string; status: string; claims: { text: string; chunk_ids: string[] }[];

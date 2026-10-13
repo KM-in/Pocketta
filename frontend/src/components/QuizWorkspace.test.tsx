@@ -5,7 +5,7 @@ import { QuizWorkspace } from "./QuizWorkspace";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-const question = { id: "q1", kind: "mcq" as const, topic: "Concurrency", prompt: "Which answer is supported?", options: ["A", "B"], chunk_ids: ["ch"], citations: [] };
+const question = { id: "q1", kind: "mcq" as const, topic: "Concurrency", prompt: "Which answer is supported?", options: ["A", "B"], chunk_ids: ["ch"], citations: [{ chunk_id: "ch", content_unit_id: "unit", source_id: "s1", source_name: "Lecture", source_version: 1, location: "page:10" }] };
 const quiz = { id: "quiz", title: "Mixed quiz", status: "ready", stale: false, pack_id: "pack", instructions: {}, questions: [question], attempts: [], warnings: [] };
 const learning = { topics: [], known_topics: ["Concurrency"], syllabus_progress: { has_syllabus: false, material_available: 0, studied: 0, assessed: 0, mastered: 0, total: 0 }, syllabus_topics: [] };
 const syllabus = { markdown: "", active: false, topics: [] };
@@ -29,6 +29,7 @@ it("keeps answer keys hidden during an attempt and reveals feedback after gradin
   render(<MemoryRouter><QuizWorkspace courseId="course" sourceIds={["s1", "s2"]} sources={[{ id: "s1", name: "Lecture" }, { id: "s2", name: "Textbook" }]} /></MemoryRouter>);
   fireEvent.click(await screen.findByRole("button", { name: "Start / retake" }));
   expect(await screen.findByText("Which answer is supported?")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Lecture · page 10" })).toHaveAttribute("href", "/courses/course/sources/s1?citation=unit&version=1");
   expect(screen.queryByText("Evidence says A.")).toBeNull();
   fireEvent.click(screen.getByLabelText("A"));
   fireEvent.click(screen.getByRole("button", { name: "Submit quiz" }));
