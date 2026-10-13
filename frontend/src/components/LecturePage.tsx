@@ -10,7 +10,7 @@ export function ReadinessDetails({ health, onlyFailures = false }: { health: Hea
   return <ul className="readiness-details">{components.map(([name, value]) => <li key={name}><strong>{name.replaceAll("_", " ")}</strong><span className={value.ready ? "component-ready" : "component-missing"}>{value.ready ? "Ready" : "Needs attention"}</span><code>{value.detail}</code>{!value.ready && value.remediation && <code className="remediation">{value.remediation}</code>}</li>)}</ul>;
 }
 
-export function LecturePage({ lecture, busy, remove, cancel, generate, update }: { lecture: LectureDetail; busy: boolean; remove: () => Promise<void>; cancel: () => Promise<void>; generate: () => Promise<void>; update: (payload: { title?: string; corrections?: SegmentCorrection[] }) => Promise<void> }) {
+export function LecturePage({ lecture, busy, remove, cancel, generate, update, initialTab }: { initialTab?: "notes" | "quiz"; lecture: LectureDetail; busy: boolean; remove: () => Promise<void>; cancel: () => Promise<void>; generate: () => Promise<void>; update: (payload: { title?: string; corrections?: SegmentCorrection[] }) => Promise<void> }) {
   const active = ACTIVE.has(lecture.status);
   const [title, setTitle] = useState(lecture.title);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -36,7 +36,7 @@ export function LecturePage({ lecture, busy, remove, cancel, generate, update }:
       {lecture.status === "failed" && <div className="failure-card"><p className="eyebrow">Processing stopped</p><h2>We couldn’t finish this lecture.</h2><p>{lecture.error}</p>{lecture.transcript && <p>Your transcript is safe. Retry generation without transcribing again.</p>}</div>}
       {lecture.status === "cancelled" && <div className="failure-card cancelled-card"><p className="eyebrow">Cancelled</p><h2>Processing stopped.</h2><p>Any completed transcript remains available below.</p></div>}
       {lecture.metrics.total_seconds > 0 && <Metrics metrics={lecture.metrics} />}
-      {lecture.study_pack && <StudyPackView pack={lecture.study_pack} />}
+      {lecture.study_pack && <StudyPackView initialTab={initialTab} pack={lecture.study_pack} />}
       {lecture.transcript && <TranscriptView transcript={lecture.transcript} editable={!active} hasStudyPack={Boolean(lecture.study_pack)} onSave={(corrections) => update({ corrections })} />}
     </div>
   );

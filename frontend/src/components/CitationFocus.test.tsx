@@ -34,3 +34,9 @@ it("rejects a citation pointing to another source", async () => {
   await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("does not belong"));
   expect(container.querySelector("iframe")).toBeNull();
 });
+
+it("uses a rendered slide image when a unit preview is available", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ content_unit_id: "unit", source_id: "source", source_name: "Slides", slide_no: 7 }) })));
+  render(<MemoryRouter initialEntries={["/courses/os/sources/source?citation=unit"]}><CitationFocus courseId="os" sourceId="source" assetUrl="/sources/source/asset" recording={false} previews={{ unit: "/sources/source/units/unit/image" }} /></MemoryRouter>);
+  expect(await screen.findByAltText("Cited slide 7")).toHaveAttribute("src", expect.stringContaining("/units/unit/image"));
+});

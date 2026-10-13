@@ -3,8 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f5f1e8" />
-    <title>PocketTA Local</title>
+    <meta name="theme-color" content="#fafafa" />
+    <meta name="description" content="Your course material, a thoughtful tutor, and evidence you can follow. A personal learning workspace." />
+    <title>PocketTA · Your learning workspace</title>
+    <script>
+      try {
+        const saved = localStorage.getItem("pocketta-theme");
+        document.documentElement.dataset.theme = saved === "dark" || (!saved && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+      } catch { /* Use the default light theme if browser storage is unavailable. */ }
+    </script>
   </head>
   <body>
     <div id="root"></div>

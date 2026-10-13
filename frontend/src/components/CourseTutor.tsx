@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { Icon } from "./WorkspaceUI";
 import { request } from "../api/client";
 import { EvidenceContext, EvidenceLinks } from "./EvidenceLinks";
 
@@ -40,6 +41,7 @@ interface Turn {
 const jsonPost = (body: unknown) => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 export function CourseTutor({ courseId }: { courseId: string }) {
+  const conversation = useRef<HTMLDivElement>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [question, setQuestion] = useState("");
   const [intent, setIntent] = useState("explain");
@@ -53,6 +55,7 @@ export function CourseTutor({ courseId }: { courseId: string }) {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [courseId]);
+  useEffect(() => { if (conversation.current) conversation.current.scrollTop = conversation.current.scrollHeight; }, [turns.length]);
   async function ask() {
     setBusy(true); setError("");
     try {
@@ -67,7 +70,8 @@ export function CourseTutor({ courseId }: { courseId: string }) {
     <p>Answers use this course’s reliable source excerpts and pass a separate support check. Understanding checks are saved separately from ordinary conversation.</p>
     {loading && <p>Loading conversation…</p>}
     {error && <p role="alert">{error}</p>}
-    <div aria-live="polite">{turns.map(turn => <TutorTurn key={turn.id} courseId={courseId} turn={turn} busy={busy} onAnswer={async response => {
+    {!loading && !turns.length && <div className="tutor-empty"><div className="empty-icon"><Icon name="spark"/></div><h3>A better question is a good beginning.</h3><p>Ask about a concept, connect two ideas, or check what you understand.</p><div className="tutor-prompts">{["Explain a key concept from my sources", "Give me an example", "Test my understanding"].map((prompt, index) => <button className="button secondary" key={prompt} onClick={() => { setQuestion(prompt); setIntent(["explain", "example", "check"][index]); document.getElementById("tutor-question")?.focus(); }}>{prompt}</button>)}</div></div>}
+    <div ref={conversation} className="tutor-conversation" aria-live="polite">{turns.map(turn => <TutorTurn key={turn.id} courseId={courseId} turn={turn} busy={busy} onAnswer={async response => {
       setBusy(true); setError("");
       try {
         const updated = await request<Turn>(`/courses/${courseId}/tutor/${turn.id}/answer`, jsonPost({ response }));
@@ -79,7 +83,7 @@ export function CourseTutor({ courseId }: { courseId: string }) {
       <label>Teaching style<select aria-label="Teaching style" value={intent} onChange={event => setIntent(event.target.value)}>
         <option value="explain">Explain simply</option><option value="example">Give an example</option><option value="compare">Compare concepts</option><option value="check">Test my understanding</option>
       </select></label>
-      <label>Course question<textarea aria-label="Course question" required maxLength={2000} value={question} onChange={event => setQuestion(event.target.value)} /></label>
+      <label>Course question<textarea id="tutor-question" placeholder="Ask a question about your course material…" aria-label="Course question" required maxLength={2000} value={question} onChange={event => setQuestion(event.target.value)} /></label>
       <button className="button" disabled={loading || busy || !question.trim()}>{busy ? "Checking course evidence…" : "Ask tutor"}</button>
     </form>
   </section>;
@@ -90,7 +94,7 @@ function TutorTurn({ courseId, turn, busy, onAnswer }: { courseId: string; turn:
   const evidence = Object.fromEntries(turn.evidence.items.map(item => [item.chunk_id, { label: citationLabel(item), target: item.content_unit_id, href: citationHref(courseId, item) }]));
   return <article className="content-card tutor-turn">
     <h3>You: {turn.question}</h3>
-    <EvidenceContext.Provider value={evidence}>
+    <div className="tutor-response"><div className="tutor-answer"><p className="eyebrow">PocketTA · Grounded in your sources</p><EvidenceContext.Provider value={evidence}>
       {turn.status === "unsupported" && <p>I could not verify an answer from this course’s reliable evidence. Try a more specific question or add relevant course material.</p>}
       {turn.claims.map((claim, index) => <div key={index}><p>{claim.text}</p><EvidenceLinks ids={claim.chunk_ids} /></div>)}
       {turn.check && <div className="understanding-check"><h4>Understanding check</h4><p>{turn.check.question}</p><EvidenceLinks ids={turn.check.chunk_ids} />
@@ -99,7 +103,7 @@ function TutorTurn({ courseId, turn, busy, onAnswer }: { courseId: string; turn:
           <button className="button secondary" disabled={busy || !response.trim()}>Submit understanding check</button>
         </form> : <div><p>Your answer: {turn.response}</p><p>{turn.grade.uncertain ? "Uncertain grade — review the evidence. " : ""}Score: {Math.round(turn.grade.score * 100)}% · Confidence: {Math.round(turn.grade.confidence * 100)}%</p><p>{turn.grade.feedback}</p></div>}
       </div>}
-    </EvidenceContext.Provider>
+    </EvidenceContext.Provider></div><aside className="tutor-evidence" aria-label="Supporting sources"><h4>SUPPORTING SOURCES</h4>{turn.evidence.items.length ? turn.evidence.items.map(item => <Link key={item.chunk_id} to={citationHref(courseId, item)}>{citationLabel(item)} ↗</Link>) : <p>No verified sources for this response.</p>}</aside></div>
     {turn.evidence.warnings.map(warning => <p className="editing-note" key={warning}>{warning}</p>)}
   </article>;
 }

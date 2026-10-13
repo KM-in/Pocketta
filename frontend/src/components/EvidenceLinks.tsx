@@ -5,7 +5,7 @@ export const EvidenceContext = createContext<Record<string, { label: string; tar
 export function EvidenceLinks({ ids }: { ids: string[] }) {
   const evidence = useContext(EvidenceContext);
   const visit = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
     window.setTimeout(() => document.getElementById(id)?.focus(), 450);
   };
 

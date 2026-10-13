@@ -1,9 +1,17 @@
 import type { HealthResponse, LectureDetail, LectureSummary, SegmentCorrection } from "../types";
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? `${window.location.origin}/api`;
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, init);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, init);
+  } catch (cause) {
+    if (cause instanceof TypeError) {
+      throw new Error("Cannot connect to the PocketTA backend. Check that it is running at http://127.0.0.1:8000, then retry.", { cause });
+    }
+    throw cause;
+  }
   if (!response.ok) {
     let message = `${response.status} ${response.statusText}`;
     try {
