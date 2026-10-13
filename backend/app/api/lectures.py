@@ -103,9 +103,9 @@ async def health(request: Request) -> HealthResponse:
         remediation="Install LibreOffice and set LIBREOFFICE_PATH to its soffice executable.",
     )
     components["embeddings"] = HealthComponent(
-        ready=bool(settings.openai_api_key),
-        detail=f"OpenAI model={settings.openai_embedding_model}; configuration only, not a connectivity check",
-        remediation="Set OPENAI_API_KEY on the server to enable embeddings.",
+        ready=settings.embedding_enabled,
+        detail=f"Embedding model={settings.effective_embedding_model}; configuration only, not a connectivity check",
+        remediation="Configure EMBEDDING_BASE_URL, EMBEDDING_MODEL and EMBEDDING_API_KEY on the server.",
     )
     for role, model in (
         ("verifier", settings.verifier_model),

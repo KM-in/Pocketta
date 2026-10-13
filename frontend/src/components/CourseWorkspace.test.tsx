@@ -13,6 +13,7 @@ beforeEach(() => {
     if (path === "/courses" && init?.method === "POST") data = { id: "new", ...JSON.parse(init.body as string) };
     else if (path === "/courses") data = courses;
     else if (path === "/health") data = { ready: false, components: { cerebras: { ready: false, detail: "Missing key", remediation: "Configure key" } } };
+    else if (path.endsWith("/study-packs")) data = [];
     else if (path === "/courses/a/sources") data = [source];
     else if (path === "/courses/b/sources" || path === "/courses/new/sources") data = [];
     else if (path === "/courses/a/citations/unit") data = { content_unit_id: "unit", source_id: "s", source_name: "Chapter one", page_no: 2 };
@@ -25,6 +26,23 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("Course workspace", () => {
+  it("limits batch uploads to two concurrent transfers and keeps the course route", async () => {
+    window.history.replaceState({}, "", "/courses/a");
+    const transfers: Array<{ status: number; responseText: string; upload: Record<string, unknown>; onload: null | (() => void); open: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> }> = [];
+    vi.stubGlobal("XMLHttpRequest", vi.fn(function () {
+      const transfer = { status: 202, responseText: JSON.stringify(source), upload: {}, onload: null as null | (() => void), open: vi.fn(), send: vi.fn() };
+      transfers.push(transfer);
+      return transfer;
+    }));
+    render(<CourseWorkspace />);
+    const input = await screen.findByLabelText("Upload course source");
+    fireEvent.change(input, { target: { files: [new File(["a"], "a.pdf"), new File(["b"], "b.pdf"), new File(["c"], "c.pdf")] } });
+    await waitFor(() => expect(transfers).toHaveLength(2));
+    await act(async () => { transfers[0].onload?.(); });
+    await waitFor(() => expect(transfers).toHaveLength(3));
+    await act(async () => { transfers[1].onload?.(); transfers[2].onload?.(); });
+    expect(window.location.pathname).toBe("/courses/a");
+  });
   it("allows creating a course without engine readiness", async () => {
     render(<CourseWorkspace />);
     await screen.findByText("Operating systems");

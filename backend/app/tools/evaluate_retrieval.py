@@ -48,7 +48,17 @@ async def evaluate(live=False):
         config = Settings(
             pocketta_data_dir=Path(directory),
             knowledge_infer_topics=False,
-            **({} if live else {"openai_api_key": ""}),
+            **(
+                {}
+                if live
+                else {
+                    "_env_file": None,
+                    "openai_api_key": "",
+                    "embedding_api_key": "",
+                    "model_provider": "lm_studio",
+                    "lm_studio_model_id": "",
+                }
+            ),
         )
         db = Database(config.database_path)
         db.initialize()
@@ -57,7 +67,7 @@ async def evaluate(live=False):
         course, locations = seed_fixture(store, fixture)
         service = KnowledgeService(config, store)
         for source in store.sources(course["id"]):
-            await service.index_source(source["id"])
+            await service.index_source(source["id"], build_summaries=False)
         results = []
         for question in fixture["questions"]:
             bundle = await service.retrieve(course["id"], question["query"], 3)

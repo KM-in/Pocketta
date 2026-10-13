@@ -18,6 +18,10 @@ from .services.knowledge import KnowledgeService
 from .api.knowledge import router as knowledge_router
 from .api.tutor import router as tutor_router
 from .services.tutor import TutorService
+from .services.course_packs import CoursePackService
+from .api.course_packs import router as course_packs_router
+from .services.quizzes import QuizService
+from .api.quizzes import router as quizzes_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -33,6 +37,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     documents = DocumentProcessor(
         app_settings, courses, scheduler, coordinator, knowledge
     )
+    course_packs = CoursePackService(
+        app_settings, courses, knowledge, scheduler, coordinator
+    )
+    quizzes = QuizService(app_settings, courses, knowledge, coordinator)
+    course_packs.quizzes = quizzes
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -42,11 +51,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await processor.start()
         await documents.start()
         await knowledge.start()
+        await course_packs.start()
         await scheduler.start()
         try:
             yield
         finally:
             scheduler.running = False
+            await course_packs.stop()
             await knowledge.stop()
             await documents.stop()
             await processor.stop()
@@ -62,6 +73,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.processor = processor
     app.state.courses = courses
     app.state.documents = documents
+    app.state.course_packs = course_packs
+    app.state.quizzes = quizzes
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
@@ -73,6 +86,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(courses_router)
     app.include_router(knowledge_router)
     app.include_router(tutor_router)
+    app.include_router(course_packs_router)
+    app.include_router(quizzes_router)
     return app
 
 

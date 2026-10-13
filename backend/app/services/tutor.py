@@ -69,6 +69,7 @@ def initialize_tutor(db):
 
 class TutorService:
     def __init__(self, settings, store, knowledge, coordinator=None):
+        self.settings, self.store = settings, store
         self.db = store.db
         self.knowledge = knowledge
         self.gateway_factory = lambda course_id: ModelGateway(
@@ -330,4 +331,48 @@ class TutorService:
             row = dict(
                 c.execute("SELECT * FROM tutor_turns WHERE id=?", (turn_id,)).fetchone()
             )
+            # Explicit understanding checks are eligible learning observations.
+            # Ordinary tutor answers never enter this history.
+            from .quizzes import topic_id
+
+            c.execute(
+                """INSERT OR IGNORE INTO topic_observations(
+                id,course_id,topic_id,topic_title,quiz_id,attempt_id,question_id,
+                score,confidence,uncertain,response,feedback,answer,explanation,created_at)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    str(uuid.uuid4()),
+                    course_id,
+                    topic_id(check.question),
+                    check.question,
+                    f"tutor:{turn_id}",
+                    None,
+                    turn_id,
+                    grade.score,
+                    grade.confidence,
+                    bool(grade.uncertain),
+                    response,
+                    grade.feedback,
+                    check.expected_answer,
+                    check.rubric,
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
+            c.execute(
+                "UPDATE syllabus_topics SET assessed_at=?,updated_at=? WHERE id=? AND course_id=?",
+                (
+                    datetime.now(UTC).isoformat(),
+                    datetime.now(UTC).isoformat(),
+                    topic_id(check.question),
+                    course_id,
+                ),
+            )
+        try:
+            from .quizzes import QuizService
+
+            QuizService(self.settings, self.store, self.knowledge)._write_learning_md(
+                course_id
+            )
+        except OSError:
+            pass
         return self.public(row)

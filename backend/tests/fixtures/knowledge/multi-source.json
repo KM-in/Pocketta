@@ -1,0 +1,16 @@
+{
+  "title": "Concurrency research",
+  "description": "Synthetic multi-source evidence with paraphrases and a disputed claim.",
+  "sources": [
+    {"key":"textbook","name":"Thread textbook","type":"pdf","units":[
+      {"location":"page:1","text":"A mutex protects a critical section. Only one thread can hold a mutex at a time."},
+      {"location":"page:2","text":"Busy waiting repeatedly polls a condition and consumes processor time."}
+    ]},
+    {"key":"lecture","name":"Synchronization lecture","type":"recording","units":[
+      {"location":"time:1000-8000","text":"Mutual exclusion stops simultaneous updates to shared data. A blocking wait suspends the waiting thread."}
+    ]},
+    {"key":"slides","name":"Discussion slides","type":"pptx","units":[
+      {"location":"slide:3","text":"Claim for discussion: busy waiting consumes no processor time. Compare this claim with the textbook before accepting it."}
+    ]}
+  ]
+}

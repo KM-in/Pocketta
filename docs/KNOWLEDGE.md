@@ -1,6 +1,6 @@
 # Shared course knowledge base
 
-Every extracted PDF page, PPTX slide, or timestamped transcript unit is indexed as original evidence. Study-pack summaries are not indexed. The React course workspace offers **Search course material**; source details show index status and a **Rebuild search index** action.
+Every extracted PDF page, PPTX slide, or timestamped transcript unit is indexed as original evidence. Routing summaries form a second searchable layer; generated study packs are not indexed. The React course workspace offers source selection, **Search course material**, and multi-source course packs. See [two-layer indexing and course packs](MULTI_SOURCE.md) for configuration, API additions, and recovery behavior.
 
 ## Processing and provenance
 
@@ -14,7 +14,7 @@ A complete index is published atomically after provider calls finish. Content ed
 
 ## Models and fallback
 
-`OPENAI_API_KEY` and `OPENAI_EMBEDDING_MODEL` configure semantic indexing and query embeddings. Uploading reliable material now sends its retrieval chunks to OpenAI when configured. Query text also goes to OpenAI for semantic retrieval. Keys remain server-side. Changing the embedding model queues a rebuild at startup; vectors from different model names are never compared.
+`EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`, and `EMBEDDING_MODEL` configure semantic indexing and query embeddings. The existing `OPENAI_API_KEY` and `OPENAI_EMBEDDING_MODEL` remain fallbacks. Reliable chunks, routing summaries, and query text go to the configured embedding provider. Keys remain server-side. Changing embedding identity queues a rebuild at startup; vectors from different endpoints, models, or dimensions are never compared.
 
 If credentials are absent or an embedding provider fails, original chunks and keyword search remain available as `keyword_ready`. The source extraction result remains usable. Index errors and search warnings disclose this fallback; rebuilding retries semantic indexing. Unknown provider costs remain unknown as described in [foundation configuration](FOUNDATION.md).
 

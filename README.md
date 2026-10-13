@@ -5,6 +5,8 @@ PocketTA organizes recordings, PDFs, and PPTX slides into course workspaces, ext
 ## What works
 
 - Create and edit courses; collect recordings, PDFs, and PPTX slides within each course.
+- Select multiple sources, search both original passages and routing summaries, and generate verified course study packs organized by topic with coverage reports.
+- Configure a separate cloud or local OpenAI-compatible embedding service; existing OpenAI settings remain supported. See [multi-source setup](docs/MULTI_SOURCE.md).
 - Extract native document text, render previews, and selectively analyse scans or visual pages with Cerebras. Cache rendered pages and vision results across retries.
 - Generate source-level study packs with validated content-unit IDs resolved to page, slide, or timestamp citations.
 - Retry/cancel processing, restore interrupted work, and preserve existing recordings under an Imported lectures course.

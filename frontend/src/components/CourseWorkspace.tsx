@@ -5,6 +5,8 @@ import { LecturePage, ReadinessDetails } from "./LecturePage";
 import { CourseTutor } from "./CourseTutor";
 import { CitationFocus } from "./CitationFocus";
 import { CourseKnowledge } from "./CourseKnowledge";
+import { CoursePacks } from "./CoursePacks";
+import { QuizWorkspace } from "./QuizWorkspace";
 import { Recorder } from "./Recorder";
 import { StudyPackView } from "./StudyPackView";
 import { EvidenceContext } from "./EvidenceLinks";
@@ -12,7 +14,7 @@ import type { HealthResponse, LectureDetail, StudyPack } from "../types";
 
 export interface Course { id: string; title: string; description: string; source_count?: number }
 interface Unit { id: string; location: string; text: string; native_text: string; uncertain: boolean; preview_url: string | null }
-interface Source { id: string; course_id: string; name: string; type: string; version: number; status: string; progress: number; error: string | null; content_units: Unit[]; study_pack: null | Record<string, unknown>; asset_url: string; knowledge?: { status: string; error: string | null }; knowledge_status?: string }
+interface Source { id: string; course_id: string; name: string; type: string; version: number; status: string; progress: number; error: string | null; content_units: Unit[]; study_pack: null | Record<string, unknown>; asset_url: string; knowledge?: { status: string; error: string | null; summaries?: { status: string; count: number; error: string | null }; embeddings?: { status: string; count: number } }; knowledge_status?: string }
 const ACTIVE = new Set(["queued", "extracting", "indexing", "generating", "normalizing", "transcribing", "deleting"]);
 const stamp = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 function locationLabel(location: string) {
@@ -37,6 +39,9 @@ function Workspace() {
   const tutorPage = useLocation().pathname.endsWith("/tutor");
   const [courses, setCourses] = useState<Course[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const chosenIds = chosen.filter(id => sources.some(s => s.id === id && s.course_id === courseId));
+  useEffect(() => { setChosen([]); }, [courseId]);
   const [selected, setSelected] = useState<Source | null>(null);
   const [lecture, setLecture] = useState<LectureDetail | null>(null);
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -70,7 +75,7 @@ function Workspace() {
         const nextLecture = source?.type === "recording" ? await api.get(source.id) : null;
         if (cancelled) return;
         setCourses(nextCourses); setHealth(nextHealth); setSources(nextSources); setSelected(source ?? null); setLecture(nextLecture);
-        if (nextSources.some(s => ACTIVE.has(s.status) || ["queued", "indexing"].includes(s.knowledge_status ?? ""))) timer = setTimeout(() => void load(), 1500);
+        if (nextSources.some(s => ACTIVE.has(s.status) || ["queued", "indexing"].includes(s.knowledge_status ?? "") || ["queued", "indexing"].includes(s.knowledge?.summaries?.status ?? ""))) timer = setTimeout(() => void load(), 1500);
       } catch (cause) { if (!cancelled) setError(cause instanceof Error ? cause.message : "Could not load workspace"); }
     };
     void load();
@@ -100,6 +105,32 @@ function Workspace() {
       if (route.current === target) navigate(`/courses/${courseId}/sources/${source.id}`);
     }, target);
   }
+  async function uploadFiles(files: FileList) {
+    if (files.length === 1) return upload(files[0]);
+    if (!courseId || !files.length) return;
+    const target = route.current, list = Array.from(files);
+    await act(async () => {
+      let next = 0;
+      const loaded = list.map(() => 0), errors: string[] = [];
+      const total = list.reduce((sum, file) => sum + file.size, 0);
+      setTransfer({ loaded: 0, total, transferred: false });
+      async function worker() {
+        while (next < list.length) {
+          const index = next++, body = new FormData(); body.append("file", list[index]);
+          try {
+            await uploadRequest<Source>(`/courses/${courseId}/sources`, body, progress => {
+              loaded[index] = Math.min(progress.loaded, list[index].size);
+              if (route.current === target) setTransfer({ loaded: loaded.reduce((a, b) => a + b, 0), total, transferred: loaded.reduce((a, b) => a + b, 0) === total });
+            });
+          } catch { errors.push(list[index].name); }
+          if (route.current === target) refresh();
+        }
+      }
+      try { await Promise.all([worker(), worker()]); }
+      finally { if (route.current === target) setTransfer(null); }
+      if (errors.length) throw new Error(`Some uploads failed: ${errors.join(", ")}. Successful uploads were kept.`);
+    }, target);
+  }
   async function removeSource() {
     if (!selected || !confirm(`Permanently delete “${selected.name}” and its generated data?`)) return;
     await act(async () => { await request(`/sources/${selected.id}`, { method: "DELETE" }); navigate(`/courses/${courseId}`); });
@@ -122,7 +153,7 @@ function Workspace() {
         {courses.map(c => <Link className={`course-link ${c.id === courseId ? "selected" : ""}`} key={c.id} to={`/courses/${c.id}`}><strong>{c.title}</strong><small>{c.source_count ?? 0} sources</small></Link>)}
       </nav>
       <button className="button secondary" onClick={() => setSetup(!setup)}>Engine & storage</button>
-      <p className="course-privacy">{health?.components.cerebras ? "Cloud mode: relevant source text and selected page images are sent to the configured cloud provider." : "Local text generation. Document vision requires cloud provider configuration."} Embeddings send supplied source text to OpenAI when enabled.</p>
+      <p className="course-privacy">{health?.components.cerebras ? "Cloud mode: relevant source text and selected page images are sent to the configured cloud provider." : "Local text generation. Document vision requires cloud provider configuration."} Embeddings send source chunks, summaries, and queries to the configured embedding provider when enabled.</p>
     </aside>
     <main className="workspace-main">
       {error && <div role="alert" className="error-banner">{error}<button className="text-button" onClick={refresh}>Retry connection</button></div>}
@@ -150,15 +181,24 @@ function Workspace() {
         </header>
         {tutorPage && <CourseTutor key={`tutor-${courseId}`} courseId={courseId!} />}
         {!selected && !tutorPage && <>
-          <CourseKnowledge key={`knowledge-${courseId}`} courseId={courseId!} />
-          <label className={`drop-zone ${busy ? "disabled" : ""}`} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (!busy) void upload(e.dataTransfer.files[0]); }}>
-            <input aria-label="Upload course source" type="file" accept=".pdf,.pptx,.wav,.mp3,.m4a,.mp4,.webm,.ogg" disabled={busy} onChange={e => { void upload(e.target.files?.[0]); e.target.value = ""; }} />
+          <CourseKnowledge key={`knowledge-${courseId}`} courseId={courseId!} sourceIds={chosenIds} />
+          <CoursePacks key={`packs-${courseId}`} courseId={courseId!} sourceIds={chosenIds} revision={revision} />
+          <QuizWorkspace key={`quizzes-${courseId}`} courseId={courseId!} sourceIds={chosenIds} sources={sources.filter(s => s.course_id === courseId).map(s => ({ id: s.id, name: s.name }))} />
+          <label className={`drop-zone ${busy ? "disabled" : ""}`} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (!busy) void uploadFiles(e.dataTransfer.files); }}>
+            <input aria-label="Upload course source" type="file" multiple accept=".pdf,.pptx,.wav,.mp3,.m4a,.mp4,.webm,.ogg" disabled={busy} onChange={e => { if (e.target.files) void uploadFiles(e.target.files); e.target.value = ""; }} />
             <span className="upload-icon">↑</span><strong>Add course material</strong><span>PDF, PPTX, audio or video · up to 200 MB</span>
           </label>
           <div className="welcome-actions"><button className="button" disabled={busy} onClick={() => void act(async () => { const target = route.current; const demo = await api.demo(courseId); if (target === route.current) navigate(`/courses/${courseId}/sources/${demo.id}`); })}>Try demo in this course</button></div>
           <Recorder key={courseId} disabled={busy} onUse={upload} />
           <section className="course-sources" aria-label="Course sources"><h2>Sources</h2>{!sources.length && <p>No material yet. Upload a source or record a lecture.</p>}
-            {sources.filter(s => s.course_id === courseId).map(s => <Link className="source-card" key={s.id} to={`/courses/${courseId}/sources/${s.id}`}><div><strong>{s.name}</strong><span>{s.type.toUpperCase()}</span></div><span className={`status ${s.status}`}>{s.status}</span>{ACTIVE.has(s.status) && <progress value={s.progress} max={100} />}{s.error && <p>{s.error}</p>}</Link>)}
+            <div className="header-actions"><label><input type="checkbox" aria-label="Select all ready sources" checked={sources.some(s => !ACTIVE.has(s.status)) && sources.filter(s => !ACTIVE.has(s.status)).every(s => chosenIds.includes(s.id))} onChange={e => setChosen(e.target.checked ? sources.filter(s => !ACTIVE.has(s.status)).map(s => s.id) : [])} /> Select all ready sources</label>
+            <button className="button secondary" disabled={busy || !chosenIds.length} onClick={() => void act(() => request(`/courses/${courseId}/index`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_ids: chosenIds }) }))}>Rebuild selected indexes</button></div>
+            {sources.filter(s => s.course_id === courseId).map(s => <article className="source-card" key={s.id}>
+              <label><input type="checkbox" aria-label={`Select ${s.name}`} disabled={ACTIVE.has(s.status)} checked={chosenIds.includes(s.id)} onChange={e => setChosen(ids => e.target.checked ? [...ids, s.id] : ids.filter(id => id !== s.id))} /> Select</label>
+              <Link to={`/courses/${courseId}/sources/${s.id}`}><strong>{s.name}</strong><span>{s.type.toUpperCase()}</span></Link><span className={`status ${s.status}`}>{s.status}</span>
+              <p>Passages: {s.knowledge?.status ?? s.knowledge_status ?? "not indexed"} · Summaries: {s.knowledge?.summaries?.status ?? "not indexed"} · Embeddings: {s.knowledge?.embeddings?.status ?? "unavailable"}</p>
+              {ACTIVE.has(s.status) && <progress value={s.progress} max={100} />}{s.error && <p>{s.error}</p>}
+            </article>)}
           </section>
         </>}
         {selected && selected.course_id === courseId && <EvidenceContext.Provider value={evidence}>
@@ -166,6 +206,8 @@ function Workspace() {
           <CitationFocus key={`citation-${selected.id}`} courseId={courseId!} sourceId={selected.id} assetUrl={selected.asset_url} recording={selected.type === "recording"} />
           {selected.knowledge && <section className="setup-card" aria-label="Source knowledge index">
             <p>Knowledge index: {selected.knowledge.status.replaceAll("_", " ")}</p>
+            <p>Summaries: {selected.knowledge.summaries?.status ?? "not indexed"} · {selected.knowledge.summaries?.count ?? 0} summaries. Embeddings: {selected.knowledge.embeddings?.status ?? "unavailable"}</p>
+            {selected.knowledge.summaries?.error && <p className="editing-note">{selected.knowledge.summaries.error}</p>}
             {selected.knowledge.error && <p className="editing-note">{selected.knowledge.error}</p>}
             <button className="button secondary" disabled={busy || ACTIVE.has(selected.status) || ["queued", "indexing"].includes(selected.knowledge.status)} onClick={() => void act(() => request(`/courses/${courseId}/sources/${selected.id}/index`, { method: "POST" }))}>Rebuild search index</button>
           </section>}

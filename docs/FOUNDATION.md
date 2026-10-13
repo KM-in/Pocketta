@@ -12,6 +12,7 @@ Keep all credentials in the server environment or an ignored `.env` file:
 | `CEREBRAS_BASE_URL` | `https://api.cerebras.ai/v1` | OpenAI-compatible cloud API root for text and document vision |
 | `CEREBRAS_API_KEY` | empty | Key for the configured cloud endpoint |
 | `CEREBRAS_COMPLETION_TOKEN_FIELD` | `max_completion_tokens` | Token-limit field; also accepts `max_tokens` |
+| `CEREBRAS_REASONING_EFFORT` | `medium` | Cloud reasoning effort: `none`, `low`, `medium`, `high`; empty uses the provider default |
 | `CEREBRAS_TEXT_MODEL`, `CEREBRAS_VISION_MODEL` | `qwen-3.8-27b` | Cloud model selection |
 | `LM_STUDIO_MODEL_ID` | empty | Exact loaded local text model |
 | `OPENAI_API_KEY` | empty | Independent key for embedding calls |
@@ -26,6 +27,8 @@ Existing `LM_STUDIO_TIMEOUT_SECONDS`, `LM_STUDIO_CHUNK_CHARS`, and `LM_STUDIO_CH
 To use another cloud provider, keep `MODEL_PROVIDER=cerebras` (the existing cloud adapter name) and set `CEREBRAS_BASE_URL`, `CEREBRAS_API_KEY`, and the text/vision model IDs to that provider's values. Include the API version path in the base URL; PocketTA appends `/chat/completions` or `/models`. Trailing slashes are removed. Set `CEREBRAS_COMPLETION_TOKEN_FIELD=max_tokens` when required by the provider. Restart the backend after changing `.env`. The provider must support OpenAI-compatible chat completions and JSON-schema structured output; document vision additionally requires image inputs. Native APIs with different request/response formats need an adapter. Verifier and grader overrides use this same endpoint. Model-run records and token-rate keys retain the `cerebras` adapter name. OpenAI embeddings remain independently configured.
 
 `/api/health` shows embedding configuration and effective verifier/grader models. These are configuration checks, not proof of cloud connectivity or model access. Missing OpenAI credentials do not affect readiness for existing source processing.
+
+Cerebras Qwen 3.8 enables high reasoning by default, and reasoning tokens consume the same completion budget as final output. PocketTA defaults to `medium` reasoning effort for cloud requests, including summaries, study packs, vision, and verifier/grader roles. Configure `CEREBRAS_REASONING_EFFORT` in `.env` to change this; the selected endpoint and models must support the value. An empty value omits the parameter and uses the provider default. Effort is a reasoning level, not a fixed token budget. Output-token limits are set to 72,000 for summaries, study packs, structured generation, vision, and grading. A response with `finish_reason=length` produces an output-token-limit error, while preserving reported billable usage in the model-run record.
 
 The configured cloud provider receives generation excerpts and selected page/slide images. Knowledge indexing sends reliable source chunks to OpenAI when configured, and semantic search sends query text, including in local text mode. Transcription and storage remain local. Browser keys and client-side provider requests are never needed.
 

@@ -82,7 +82,7 @@ class GenerationService:
                     summary = await self._generate_model(
                         ChunkSummary,
                         _chunk_prompt(chunk),
-                        max_tokens=900,
+                        max_tokens=72_000,
                         validator=lambda value, ids=valid_ids: _validate_chunk(
                             value, ids
                         ),
@@ -102,7 +102,7 @@ class GenerationService:
         return await self._generate_model(
             pack_type,
             prompt,
-            max_tokens=4096,
+            max_tokens=72_000,
             validator=lambda value: value.validate_evidence(transcript),
         )
 

@@ -5,6 +5,16 @@ import { CourseKnowledge } from "./CourseKnowledge";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+it("restricts retrieval to the selected source IDs", async () => {
+  const fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ items: [], warnings: [], coverage: "unsupported", retrieval_mode: "keyword" }) }));
+  vi.stubGlobal("fetch", fetch);
+  render(<MemoryRouter><CourseKnowledge courseId="os" sourceIds={["one", "two"]} /></MemoryRouter>);
+  fireEvent.change(screen.getByLabelText("Search course material"), { target: { value: "mutex" } });
+  fireEvent.click(screen.getByRole("button", { name: "Search sources" }));
+  await screen.findByText(/No reliable course evidence found/);
+  expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/retrieve"), expect.objectContaining({ body: JSON.stringify({ query: "mutex", limit: 6, source_ids: ["one", "two"] }) }));
+});
+
 it("searches the active course and shows exact evidence locations", async () => {
   const fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({
     items: [{ chunk_id: "chunk", content_unit_id: "unit", source_id: "slides", source_name: "Scheduling", source_version: 1, excerpt: "Round robin uses a time quantum.", citation: { slide_no: 7 } }], warnings: [], coverage: "supported", retrieval_mode: "hybrid",

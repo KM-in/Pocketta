@@ -62,6 +62,12 @@ class CourseStore:
         from .services.tutor import initialize_tutor
 
         initialize_tutor(self.db)
+        from .services.course_packs import initialize_course_packs
+
+        initialize_course_packs(self.db)
+        from .services.quizzes import initialize_quizzes
+
+        initialize_quizzes(self.db)
         for source in self.summaries(IMPORT_COURSE):
             self.sync_lecture_units(source["id"])
 

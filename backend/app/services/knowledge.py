@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel, Field
 
 from .gateway import ModelGateway
+from .summary_index import SummaryIndex, VectorCache, initialize_summaries
 
 STOP_WORDS = set(
     "a an the and or of to in on for with is are was were be as at by from it its this that these those not can may will what how why when which explain describe give compare example simply please about does do we you they their our have has had into only each also than then use used using".split()
@@ -37,7 +38,9 @@ def chunk_text(text, size, overlap):
     while start < len(text):
         end = min(len(text), start + size)
         if end < len(text):
-            boundary = text.rfind(" ", start + size // 2, end)
+            boundary = text.rfind("\n\n", start + size // 2, end)
+            if boundary < 0:
+                boundary = text.rfind(" ", start + size // 2, end)
             if boundary > start:
                 end = boundary
         if text[start:end].strip():
@@ -98,6 +101,7 @@ class EvidenceBundle(BaseModel):
     coverage: str
     retrieval_mode: str
     warnings: list[str]
+    diagnostics: dict = Field(default_factory=dict)
 
 
 def initialize_knowledge(db):
@@ -166,12 +170,16 @@ def initialize_knowledge(db):
         END;
         """)
 
+    initialize_summaries(db)
+
 
 class KnowledgeService:
     def __init__(self, settings, store, scheduler=None, coordinator=None):
         self.settings, self.store, self.db = settings, store, store.db
         self.scheduler, self.coordinator = scheduler, coordinator
         self.pending = set()
+        self.summaries = SummaryIndex(self)
+        self.vector_cache = VectorCache()
 
     def snapshot(self, source_id, c=None):
         if c is None:
@@ -231,6 +239,12 @@ class KnowledgeService:
                 }
             ),
             "chunk_count": count,
+            "passages": {
+                "status": row["status"] if row else "not_indexed",
+                "count": count,
+            },
+            "summaries": self.summaries.status(source_id),
+            "embeddings": self.embedding_status(source_id),
         }
 
     def set_status(self, source_id, status, error=None):
@@ -252,24 +266,29 @@ class KnowledgeService:
             _, _, fingerprint = self.snapshot(id)
             changed = state.get("fingerprint") != fingerprint
             changed_model = (
-                bool(self.settings.openai_api_key)
-                and state.get("embedding_model") != self.settings.openai_embedding_model
+                self.settings.embedding_enabled
+                and state.get("embedding_model") != self.settings.embedding_identity
             )
+            summary_resume = state["summaries"]["status"] in ("queued", "indexing")
             if state["status"] == "cancelled":
                 continue
             if id not in self.scheduler.jobs and (
                 changed
                 or changed_model
+                or summary_resume
                 or state["status"] in ("queued", "indexing", "stale", "not_indexed")
             ):
-                self.enqueue(id)
+                self.enqueue(
+                    id,
+                    build_summaries=summary_resume or bool(state["summaries"]["count"]),
+                )
 
     async def stop(self):
         for id in list(self.pending):
             await self.scheduler.cancel(f"knowledge:{id}")
             self.set_status(id, "queued")
 
-    def enqueue(self, source_id):
+    def enqueue(self, source_id, build_summaries=True):
         if source_id in self.pending or source_id in self.scheduler.jobs:
             raise ValueError("Source is already processing")
         source, units, _ = self.snapshot(source_id)
@@ -280,20 +299,22 @@ class KnowledgeService:
         self.scheduler.submit(
             f"knowledge:{source_id}",
             source["course_id"],
-            lambda: self.index_source(source_id),
+            lambda: self.index_source(source_id, build_summaries=build_summaries),
             lambda: self.pending.discard(source_id),
         )
 
-    async def index_source(self, source_id):
+    async def index_source(self, source_id, build_summaries=True):
         self.store.sync_lecture_units(source_id)
         source, units, fingerprint = self.snapshot(source_id)
         previous = self.status(source_id)
-        model = self.settings.openai_embedding_model
+        model = self.settings.embedding_identity
         if (
             previous.get("fingerprint") == fingerprint
             and previous["status"] == "ready"
             and previous["embedding_model"] == model
         ):
+            if build_summaries:
+                await self.summaries.build(source_id)
             return
         self.set_status(source_id, "indexing")
         chunks = []
@@ -333,7 +354,7 @@ class KnowledgeService:
             self.settings, self.db, source_id, coordinator=self.coordinator
         )
         try:
-            if self.settings.openai_api_key:
+            if self.settings.embedding_enabled:
                 for offset in range(0, len(chunks), self.settings.embedding_batch_size):
                     batch = chunks[offset : offset + self.settings.embedding_batch_size]
                     vectors = await gateway.embed([chunk["text"] for chunk in batch])
@@ -489,6 +510,14 @@ class KnowledgeService:
             )
             raise
 
+        with self.db._connect() as c:
+            c.execute(
+                "UPDATE chunks SET embedding_dimension=json_array_length(embedding_json) WHERE source_id=?",
+                (source_id,),
+            )
+        if build_summaries:
+            await self.summaries.build(source_id)
+
     def upsert_topic(self, course_id, name, inferred=False, c=None):
         if c is None:
             with self.db._connect() as connection:
@@ -551,11 +580,39 @@ class KnowledgeService:
             ]
         return {"topics": topics, "prerequisites": links}
 
-    async def retrieve(self, course_id, query, limit=6):
-        query_terms = list(dict.fromkeys(terms(query)))[:32]
-        warnings = []
+    def embedding_status(self, source_id):
         with self.db._connect() as c:
-            # Every candidate must still be reliable, current, and a member of this course.
+            row = c.execute(
+                "SELECT count(*),sum(embedding_json IS NOT NULL AND embedding_model=?) FROM chunks WHERE source_id=?",
+                (self.settings.embedding_identity, source_id),
+            ).fetchone()
+        return {
+            "status": "ready" if row[0] and row[0] == row[1] else "unavailable",
+            "count": row[1] or 0,
+            "model": self.settings.effective_embedding_model,
+            "endpoint": self.settings.embedding_base_url,
+        }
+
+    def validate_selection(self, course_id, source_ids):
+        if source_ids is None:
+            return None
+        selected = list(dict.fromkeys(source_ids))
+        if not selected:
+            raise ValueError("Select at least one source")
+        with self.db._connect() as c:
+            allowed = {
+                r[0]
+                for r in c.execute(
+                    "SELECT id FROM sources WHERE course_id=?", (course_id,)
+                )
+            }
+        if not set(selected) <= allowed:
+            raise ValueError("Source not found in this course")
+        return selected
+
+    def evidence_rows(self, course_id, source_ids=None):
+        selected = self.validate_selection(course_id, source_ids)
+        with self.db._connect() as c:
             rows = [
                 dict(r)
                 for r in c.execute(
@@ -568,35 +625,89 @@ class KnowledgeService:
                     (course_id, course_id),
                 )
             ]
-            ids = {r["id"] for r in rows}
-            keyword = []
-            if query_terms:
-                match = " OR ".join(
-                    '"' + word.replace('"', '""') + '"' for word in query_terms
+        return [r for r in rows if selected is None or r["source_id"] in selected]
+
+    def evidence_item(self, row, score=0):
+        return EvidenceItem(
+            chunk_id=row["id"],
+            content_unit_id=row["content_unit_id"],
+            source_id=row["source_id"],
+            source_name=row["name"],
+            source_version=row["source_version"],
+            excerpt=row["text"],
+            score=score,
+            citation=location_citation(row["location"]),
+            char_start=row["char_start"],
+            char_end=row["char_end"],
+            confidence=row["confidence"],
+            visual_url=f"/sources/{row['source_id']}/units/{row['content_unit_id']}/image"
+            if row["image_path"]
+            else None,
+            topic_ids=[],
+        )
+
+    async def retrieve(self, course_id, query, limit=6, source_ids=None):
+        source_ids = self.validate_selection(course_id, source_ids)
+        rows = self.evidence_rows(course_id, source_ids)
+        ids = {r["id"] for r in rows}
+        source_set = {r["source_id"] for r in rows}
+        query_terms = list(dict.fromkeys(terms(query)))[:32]
+        match = " OR ".join('"' + word.replace('"', '""') + '"' for word in query_terms)
+        warnings, keyword, summary_keyword = [], [], []
+        with self.db._connect() as c:
+            summaries = [
+                dict(r)
+                for r in c.execute(
+                    """SELECT ss.* FROM source_summaries ss
+                JOIN summary_index si ON si.source_id=ss.source_id JOIN sources s ON s.id=ss.source_id
+                WHERE s.course_id=? AND ss.source_version=s.version AND si.status IN ('ready','keyword_ready')""",
+                    (course_id,),
                 )
+                if r["source_id"] in source_set
+            ]
+            if match:
                 keyword = [
-                    r["id"]
+                    r[0]
                     for r in c.execute(
                         "SELECT ch.id FROM chunks_fts JOIN chunks ch ON ch.rowid=chunks_fts.rowid WHERE chunks_fts MATCH ? AND ch.course_id=? ORDER BY bm25(chunks_fts),ch.id",
                         (match, course_id),
                     )
-                    if r["id"] in ids
+                    if r[0] in ids
                 ][:40]
+                summary_ids = {r["id"] for r in summaries}
+                summary_keyword = [
+                    r[0]
+                    for r in c.execute(
+                        "SELECT ss.id FROM summaries_fts JOIN source_summaries ss ON ss.rowid=summaries_fts.rowid WHERE summaries_fts MATCH ? ORDER BY bm25(summaries_fts),ss.id",
+                        (match,),
+                    )
+                    if r[0] in summary_ids
+                ][:10]
             tags = {}
             for row in c.execute(
                 "SELECT ct.chunk_id,ct.topic_id FROM chunk_topics ct JOIN chunks ch ON ch.id=ct.chunk_id WHERE ch.course_id=?",
                 (course_id,),
             ):
                 tags.setdefault(row[0], []).append(row[1])
-        semantic = []
-        cosine_scores = {}
-        vectors = [
-            r
-            for r in rows
-            if r["embedding_model"] == self.settings.openai_embedding_model
-            and r["embedding_json"]
+        # Model/endpoint changes make old routing summaries ineligible immediately.
+        fp_cache = {}
+        for sid in source_set:
+            fp_cache[sid] = self.summaries.fingerprint(sid)
+        summaries = [
+            r for r in summaries if r["fingerprint"] == fp_cache[r["source_id"]]
         ]
-        if query_terms and vectors and self.settings.openai_api_key:
+        eligible_summaries = {r["id"] for r in summaries}
+        summary_keyword = [id for id in summary_keyword if id in eligible_summaries]
+        semantic, summary_semantic = [], []
+        if (
+            query_terms
+            and self.settings.embedding_enabled
+            and any(
+                r.get("embedding_json")
+                and r.get("embedding_model") == self.settings.embedding_identity
+                for r in rows + summaries
+            )
+        ):
             try:
                 vector = (
                     await ModelGateway(
@@ -606,48 +717,64 @@ class KnowledgeService:
                         course_id=course_id,
                     ).embed([query])
                 )[0]
-                for row in vectors:
-                    similarity = cosine(vector, json.loads(row["embedding_json"]))
-                    if similarity >= self.settings.retrieval_min_similarity:
-                        cosine_scores[row["id"]] = similarity
-                semantic = sorted(
-                    cosine_scores, key=lambda id: (-cosine_scores[id], id)
-                )[:40]
+
+                def rank(layer, candidates, count):
+                    scores = self.vector_cache.score(
+                        (course_id, layer),
+                        candidates,
+                        vector,
+                        self.settings.embedding_identity,
+                    )
+                    return sorted(
+                        (
+                            id
+                            for id in scores
+                            if scores[id] >= self.settings.retrieval_min_similarity
+                        ),
+                        key=lambda id: (-scores[id], id),
+                    )[:count]
+
+                semantic = rank("passages", rows, 40)
+                summary_semantic = rank("summaries", summaries, 10)
             except Exception:
                 warnings.append(
                     "Semantic search unavailable; results use keyword search"
                 )
         elif rows:
             warnings.append(
-                "Semantic search unavailable; index with the configured OpenAI embedding model"
+                "Semantic search unavailable; index with the configured embedding model"
             )
-        with self.db._connect() as c:
-            current = {
-                r[0]
-                for r in c.execute(
-                    """SELECT ch.id FROM chunks ch JOIN sources s ON s.id=ch.source_id
-                JOIN content_units u ON u.id=ch.content_unit_id JOIN knowledge_index k ON k.source_id=s.id
-                WHERE s.course_id=? AND ch.course_id=? AND ch.source_version=s.version
-                AND k.status IN ('ready','keyword_ready') AND u.uncertain=0
-                AND ch.text=substr(u.text,ch.char_start+1,ch.char_end-ch.char_start)""",
-                    (course_id, course_id),
-                )
-            }
-        keyword = [id for id in keyword if id in current]
-        semantic = [id for id in semantic if id in current]
-        scores = {}
-        for ranking in (keyword, semantic):
+        summary_scores = {}
+        for ranking in (summary_keyword, summary_semantic):
             for rank, id in enumerate(ranking, 1):
-                scores[id] = scores.get(id, 0) + 1 / (60 + rank)
-        confidence = {row["id"]: row["confidence"] for row in rows}
-        scores = {id: score * confidence[id] for id, score in scores.items()}
-        ranked = sorted(scores, key=lambda id: (-scores[id], id))
-        by_id = {row["id"]: row for row in rows}
-        items = []
-        seen = []
+                summary_scores[id] = summary_scores.get(id, 0) + 1 / (60 + rank)
+        by_summary = {r["id"]: r for r in summaries}
+        routed = []
+        for id in sorted(summary_scores, key=lambda id: (-summary_scores[id], id))[:10]:
+            routed.extend(json.loads(by_summary[id]["support_json"]))
+        routed = list(dict.fromkeys(routed))
+        # Recheck after provider awaits, preventing deleted/edited evidence from escaping.
+        current = {r["id"] for r in self.evidence_rows(course_id, source_ids)}
+        scores = {}
+        for ranking in (keyword, semantic, routed):
+            for rank, id in enumerate(ranking, 1):
+                if id in current:
+                    scores[id] = scores.get(id, 0) + 1 / (60 + rank)
+        by_id = {r["id"]: r for r in rows}
+        ranked = sorted(
+            scores, key=lambda id: (-scores[id] * by_id[id]["confidence"], id)
+        )
+        # First take the strongest result from each relevant source, then fill details.
+        diverse, used_sources = [], set()
+        for id in ranked:
+            sid = by_id[id]["source_id"]
+            if sid not in used_sources:
+                diverse.append(id)
+                used_sources.add(sid)
+        ranked = diverse + [id for id in ranked if id not in diverse]
+        items, seen, size = [], [], 0
         for id in ranked:
             row = by_id[id]
-            # Suppress overlapping windows from the same primary evidence location.
             if any(
                 old["content_unit_id"] == row["content_unit_id"]
                 and max(old["char_start"], row["char_start"])
@@ -655,38 +782,34 @@ class KnowledgeService:
                 for old in seen
             ):
                 continue
+            if size + len(row["text"]) > self.settings.retrieval_context_chars:
+                continue
+            item = self.evidence_item(row, scores[id])
+            item.topic_ids = tags.get(id, [])
+            items.append(item)
             seen.append(row)
-            items.append(
-                EvidenceItem(
-                    chunk_id=id,
-                    content_unit_id=row["content_unit_id"],
-                    source_id=row["source_id"],
-                    source_name=row["name"],
-                    source_version=row["source_version"],
-                    excerpt=row["text"],
-                    score=scores[id],
-                    citation=location_citation(row["location"]),
-                    char_start=row["char_start"],
-                    char_end=row["char_end"],
-                    confidence=row["confidence"],
-                    visual_url=(
-                        f"/sources/{row['source_id']}/units/{row['content_unit_id']}/image"
-                        if row["image_path"]
-                        else None
-                    ),
-                    topic_ids=tags.get(id, []),
-                )
-            )
-            if len(items) >= limit:
+            size += len(row["text"])
+            if len(items) >= min(limit, 12):
                 break
-        # An evidence candidate is not a claim-faithfulness guarantee (section 3).
+        missing_summaries = source_set - {r["source_id"] for r in summaries}
+        if missing_summaries:
+            warnings.append(
+                "Some sources lack current summaries; direct passage search remains available"
+            )
         return EvidenceBundle(
             course_id=course_id,
             query=query,
             items=items,
             coverage="supported" if items else "unsupported",
-            retrieval_mode="hybrid" if semantic else "keyword",
+            retrieval_mode="hybrid" if semantic or summary_semantic else "keyword",
             warnings=warnings,
+            diagnostics={
+                "passage_keyword_matches": len(keyword),
+                "passage_semantic_matches": len(semantic),
+                "summary_matches": len(summary_scores),
+                "summary_routed_passages": len(routed),
+                "context_chars": size,
+            },
         )
 
 

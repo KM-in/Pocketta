@@ -53,6 +53,81 @@ def test_cloud_endpoint_defaults_and_environment(monkeypatch):
     assert adapter.completion_token_field == "max_tokens"
 
 
+def test_cloud_reasoning_defaults_are_overridable():
+    config = settings(model_provider="cerebras")
+    adapter = text_adapter(config)
+    payload = {"model": "qwen-3.8-27b", "max_tokens": 900}
+    assert adapter.chat_payload(payload)["reasoning_effort"] == "medium"
+    assert "reasoning_effort" not in payload
+    assert adapter.chat_payload(
+        {**payload, "model": "other-model"}
+    )["reasoning_effort"] == "medium"
+    assert adapter.chat_payload(
+        {**payload, "reasoning_effort": "low"}
+    )["reasoning_effort"] == "low"
+
+    config.cerebras_base_url = "https://inference.example/v1"
+    assert text_adapter(config).chat_payload(payload)["reasoning_effort"] == "medium"
+    config.cerebras_reasoning_effort = ""
+    assert "reasoning_effort" not in text_adapter(config).chat_payload(payload)
+    config.cerebras_reasoning_effort = "high"
+    adapter = text_adapter(config)
+    assert adapter.chat_payload(payload)["reasoning_effort"] == "high"
+    assert adapter.chat_payload({**payload, "model": "verifier"})[
+        "reasoning_effort"
+    ] == "high"
+
+
+def test_cloud_reasoning_effort_from_environment(monkeypatch):
+    monkeypatch.setenv("CEREBRAS_REASONING_EFFORT", "low")
+    config = settings(model_provider="cerebras")
+    assert text_adapter(config).chat_payload({"model": "qwen-3.8-27b"})[
+        "reasoning_effort"
+    ] == "low"
+
+
+@pytest.mark.parametrize("content", [None, '{"answer":"partial'])
+@pytest.mark.parametrize("limit", [900, 4096, 72_000])
+@pytest.mark.asyncio
+async def test_output_limit_is_actionable_and_preserves_billable_usage(
+    store, monkeypatch, content, limit
+):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{
+                    "finish_reason": "length",
+                    "message": {"content": content, "reasoning": "private reasoning"},
+                }],
+                "usage": {
+                    "prompt_tokens": 100,
+                    "completion_tokens": limit,
+                    "completion_tokens_details": {"reasoning_tokens": limit},
+                },
+            },
+        )
+
+    transport(monkeypatch, handler)
+    gateway = ModelGateway(
+        settings(model_provider="cerebras", cerebras_api_key="secret"), store.db
+    )
+    with pytest.raises(GenerationError, match=f"output token limit \\({limit}\\)") as error:
+        await gateway._generate_model(Result, "Prompt", max_tokens=limit)
+    assert "Reduce reasoning effort" in str(error.value)
+    assert "private reasoning" not in str(error.value)
+    assert "secret" not in str(error.value)
+    assert len(requests) == 1
+    assert json.loads(requests[0].content)["reasoning_effort"] == "medium"
+    with store.db._connect() as c:
+        row = dict(c.execute("SELECT * FROM model_runs").fetchone())
+    assert row["status"] == "failed" and row["attempts"] == 1
+    assert json.loads(row["usage_json"])["completion_tokens"] == limit
+
+
 @pytest.mark.parametrize(
     "url",
     [
@@ -83,7 +158,7 @@ async def test_custom_cloud_endpoint_for_models_text_roles_and_vision(
         if request.method == "GET":
             return httpx.Response(200, json={"data": [{"id": "custom-text"}]})
         payload = json.loads(request.content)
-        assert payload[token_field] > 0
+        assert payload[token_field] == 72_000
         other_field = (
             "max_tokens"
             if token_field == "max_completion_tokens"

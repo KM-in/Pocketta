@@ -21,10 +21,49 @@ class Settings(BaseSettings):
     cerebras_completion_token_field: Literal["max_tokens", "max_completion_tokens"] = (
         "max_completion_tokens"
     )
+    cerebras_reasoning_effort: Literal["", "none", "low", "medium", "high"] = "medium"
     cerebras_text_model: str = "qwen-3.8-27b"
     cerebras_vision_model: str = "qwen-3.8-27b"
     openai_api_key: str = ""
     openai_embedding_model: str = "text-embedding-3-small"
+    embedding_base_url: str = "https://api.openai.com/v1"
+    embedding_api_key: str | None = None
+    embedding_model: str | None = None
+    retrieval_context_chars: int = Field(default=24_000, ge=2000, le=100_000)
+
+    @property
+    def effective_embedding_model(self):
+        return self.embedding_model or self.openai_embedding_model
+
+    @property
+    def effective_embedding_key(self):
+        return (
+            self.openai_api_key
+            if self.embedding_api_key is None
+            else self.embedding_api_key
+        )
+
+    @property
+    def embedding_is_local(self):
+        return urlparse(self.embedding_base_url).hostname in {
+            "localhost",
+            "127.0.0.1",
+            "::1",
+        }
+
+    @property
+    def embedding_enabled(self):
+        return bool(self.effective_embedding_key) or self.embedding_is_local
+
+    @property
+    def embedding_identity(self):
+        model = self.effective_embedding_model
+        return (
+            model
+            if self.embedding_base_url == "https://api.openai.com/v1"
+            else f"{self.embedding_base_url}|{model}"
+        )
+
     retrieval_chunk_chars: int = Field(default=1200, ge=200, le=6000)
     retrieval_chunk_overlap_chars: int = Field(default=160, ge=0)
     embedding_batch_size: int = Field(default=32, ge=1, le=128)
@@ -116,7 +155,7 @@ class Settings(BaseSettings):
             return None
         return value
 
-    @field_validator("cerebras_base_url")
+    @field_validator("cerebras_base_url", "embedding_base_url")
     @classmethod
     def cloud_base_url_must_be_http(cls, value: str) -> str:
         value = value.strip()

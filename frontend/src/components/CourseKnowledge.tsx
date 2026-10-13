@@ -18,7 +18,7 @@ function label(item: Evidence) {
   return `${stamp(c.start_sec ?? 0)}–${stamp(c.end_sec ?? 0)}`;
 }
 
-export function CourseKnowledge({ courseId }: { courseId: string }) {
+export function CourseKnowledge({ courseId, sourceIds = [] }: { courseId: string; sourceIds?: string[] }) {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<Bundle | null>(null);
   const [error, setError] = useState("");
@@ -26,12 +26,12 @@ export function CourseKnowledge({ courseId }: { courseId: string }) {
   const revision = useRef(0);
   return <section className="setup-card" aria-label="Course knowledge search">
     <h2>Search course material</h2>
-    <p>Find source excerpts across this course’s PDFs, slides, and lectures.</p>
+    <p>Find source excerpts across this course’s PDFs, slides, and lectures. {sourceIds.length ? `Searching ${sourceIds.length} selected sources.` : "Searching all course sources."}</p>
     <form onSubmit={event => {
       event.preventDefault();
       const current = ++revision.current;
       setBusy(true); setError(""); setResult(null);
-      void request<Bundle>(`/courses/${courseId}/retrieve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, limit: 6 }) })
+      void request<Bundle>(`/courses/${courseId}/retrieve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, limit: 6, ...(sourceIds.length ? { source_ids: sourceIds } : {}) }) })
         .then(bundle => { if (revision.current === current) setResult(bundle); })
         .catch(cause => { if (revision.current === current) setError(cause instanceof Error ? cause.message : "Search failed"); })
         .finally(() => { if (revision.current === current) setBusy(false); });

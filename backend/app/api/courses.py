@@ -44,14 +44,14 @@ def public_source(source):
         {k: v for k, v in u.items() if k not in ("image_path", "vision_json")}
         | {
             "preview_url": (
-                f'/sources/{source["id"]}/units/{u["id"]}/image'
+                f"/sources/{source['id']}/units/{u['id']}/image"
                 if u["image_path"]
                 else None
             )
         }
         for u in source["content_units"]
     ]
-    source["asset_url"] = f'/sources/{source["id"]}/asset'
+    source["asset_url"] = f"/sources/{source['id']}/asset"
     return source
 
 
@@ -95,7 +95,10 @@ def delete_course(request: Request, id: str):
 @router.get("/courses/{id}/sources")
 def list_sources(request: Request, id: str):
     require_course(request, id)
-    return request.app.state.courses.summaries(id)
+    return [
+        row | {"knowledge": request.app.state.knowledge.status(row["id"])}
+        for row in request.app.state.courses.summaries(id)
+    ]
 
 
 @router.post("/courses/{id}/sources", status_code=202)
@@ -305,7 +308,7 @@ def export(request: Request, id: str):
     if not pack:
         raise HTTPException(409, "Generate a study pack first")
     units = {u["id"]: u for u in source["content_units"]}
-    lines = [f'# {source["name"]}', "", pack["overview"], ""]
+    lines = [f"# {source['name']}", "", pack["overview"], ""]
     for key in ("notes", "concepts", "flashcards", "quiz"):
         lines.extend([f"## {key.title()}", ""])
         for item in pack[key]:
@@ -331,7 +334,7 @@ def export(request: Request, id: str):
                 [
                     "Evidence: "
                     + ", ".join(
-                        f'[{source["name"]} · {units[u]["location"]}](#{u})'
+                        f"[{source['name']} · {units[u]['location']}](#{u})"
                         for u in item["content_unit_ids"]
                     ),
                     "",
@@ -339,7 +342,7 @@ def export(request: Request, id: str):
             )
     for unit in units.values():
         lines.extend(
-            [f'<a id="{unit["id"]}"></a>', f'### {unit["location"]}', unit["text"], ""]
+            [f'<a id="{unit["id"]}"></a>', f"### {unit['location']}", unit["text"], ""]
         )
     return PlainTextResponse(
         "\n".join(lines),

@@ -16,6 +16,8 @@ class ProviderAdapter:
     base_url: str
     api_key: str
     completion_token_field: str = "max_tokens"
+    reasoning_effort: str | None = None
+    requires_api_key: bool = True
 
     @property
     def headers(self):
@@ -24,7 +26,9 @@ class ProviderAdapter:
     def chat_payload(self, payload):
         result = dict(payload)
         if self.completion_token_field != "max_tokens":
-            result[self.completion_token_field] = result.pop("max_tokens", 4096)
+            result[self.completion_token_field] = result.pop("max_tokens", 72_000)
+        if self.reasoning_effort is not None:
+            result.setdefault("reasoning_effort", self.reasoning_effort)
         return result
 
 
@@ -35,6 +39,7 @@ def text_adapter(settings):
             settings.cerebras_base_url,
             settings.cerebras_api_key,
             settings.cerebras_completion_token_field,
+            settings.cerebras_reasoning_effort or None,
         )
     return ProviderAdapter(
         "lm_studio", settings.lm_studio_base_url, settings.lm_studio_api_key

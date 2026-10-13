@@ -10,6 +10,7 @@ router = APIRouter(prefix="/api")
 class SearchInput(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     limit: int = Field(default=6, ge=1, le=12)
+    source_ids: list[str] | None = Field(default=None, min_length=1)
 
     @field_validator("query")
     @classmethod
@@ -31,9 +32,34 @@ class PrerequisiteInput(BaseModel):
 @router.post("/courses/{course_id}/retrieve", response_model=EvidenceBundle)
 async def retrieve(request: Request, course_id: str, payload: SearchInput):
     require_course(request, course_id)
-    return await request.app.state.knowledge.retrieve(
-        course_id, payload.query, payload.limit
-    )
+    try:
+        return await request.app.state.knowledge.retrieve(
+            course_id, payload.query, payload.limit, payload.source_ids
+        )
+    except ValueError as error:
+        raise HTTPException(404, str(error)) from error
+
+
+class IndexInput(BaseModel):
+    source_ids: list[str] = Field(min_length=1)
+
+
+@router.post("/courses/{course_id}/index", status_code=202)
+async def index_course(request: Request, course_id: str, payload: IndexInput):
+    require_course(request, course_id)
+    knowledge = request.app.state.knowledge
+    try:
+        selected = knowledge.validate_selection(course_id, payload.source_ids)
+        for id in selected:
+            if id in knowledge.pending or id in request.app.state.scheduler.jobs:
+                raise ValueError("Source is already processing")
+            if not request.app.state.courses.units(id):
+                raise ValueError("Extract source content before indexing")
+        for id in selected:
+            knowledge.enqueue(id)
+        return [knowledge.status(id) for id in selected]
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
 
 
 @router.get("/sources/{source_id}/knowledge")
