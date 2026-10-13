@@ -195,7 +195,8 @@
     "Judge metrics are model-based estimates and were scored with the configured provider/model shown above.",
     "This run does not evaluate question quality or real learner outcomes.",
     "Semantic embeddings are omitted when no embedding service is configured; retrieval mode is recorded per case.",
-    "Faithfulness and answer relevancy are averaged over answered supported cases; answer coverage is reported separately. Context precision and recall cover all supported fixture cases."
+    "Faithfulness and answer relevancy are averaged over answered supported cases; answer coverage is reported separately. Context precision and recall cover all supported fixture cases.",
+    "One isolated replay of a question refused in the full run was answered and verified; this single replay is anecdotal and is not included in the full-run metrics."
   ],
   "answered_supported_case_count": 4,
   "supported_answer_coverage": 0.6666666666666666,
@@ -205,5 +206,12 @@
     "AnswerRelevancyMetric": 4,
     "ContextualPrecisionMetric": 6,
     "ContextualRecallMetric": 6
+  },
+  "follow_up_replay": {
+    "query": "What is a process address space?",
+    "status": "answered",
+    "claims_semantically_verified": true,
+    "included_in_full_run_metrics": false,
+    "notes": "One isolated replay of a question refused in the full run was answered and verified. This single replay is anecdotal and does not establish stable answer coverage."
   }
 }

@@ -13,7 +13,7 @@ The evaluator uses DeepEval 4.2.0 and runs the actual PocketTA tutor over the si
 | Tutor answer coverage | 4/6 (66.7%) | 6 supported questions |
 | Unsupported-question refusal accuracy | 2/2 (100%) | 2 unsupported questions |
 
-The tutor conservatively refused two questions that the fixture marks as answerable: process address space and thread sharing. The evaluator reports answer coverage separately so a refusal cannot inflate faithfulness or lower answer relevancy as if it were an attempted answer. Retrieval metrics still include all six supported questions. The earlier 402 and a sandbox DNS failure were followed by a successful live run after the judge adapter was changed to normalize schemas like the production gateway.
+In the full run, the tutor refused two questions that the fixture marks as answerable: process address space and thread sharing. A separate isolated replay of the process-address-space question returned an answer with claims that passed semantic verification, so the 4/6 coverage result is a single-run observation and response stability still needs repeated measurement. The evaluator reports answer coverage separately so a refusal cannot inflate faithfulness or lower answer relevancy as if it were an attempted answer. Retrieval metrics still include all six supported questions. The earlier 402 and a sandbox DNS failure were followed by a successful live run after the judge adapter was changed to normalize schemas like the production gateway.
 
 ## Reproduce
 
