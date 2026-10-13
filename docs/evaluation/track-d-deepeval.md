@@ -6,14 +6,14 @@ The evaluator uses DeepEval 4.2.0 and runs the actual PocketTA tutor over the si
 
 | Measure | Result | Cases |
 |---|---:|---:|
-| Tutor faithfulness | 1.000 | 4 answered supported questions |
-| Answer relevancy | 0.969 | 4 answered supported questions |
+| Tutor faithfulness | 1.000 | 6 answered supported questions |
+| Answer relevancy | 0.972 | 6 answered supported questions |
 | Context precision | 0.972 | 6 supported questions |
 | Context recall | 1.000 | 6 supported questions |
-| Tutor answer coverage | 4/6 (66.7%) | 6 supported questions |
+| Tutor answer coverage | 6/6 (100%) | 6 supported questions |
 | Unsupported-question refusal accuracy | 2/2 (100%) | 2 unsupported questions |
 
-In the full run, the tutor refused two questions that the fixture marks as answerable: process address space and thread sharing. A separate isolated replay of the process-address-space question returned an answer with claims that passed semantic verification, so the 4/6 coverage result is a single-run observation and response stability still needs repeated measurement. The evaluator reports answer coverage separately so a refusal cannot inflate faithfulness or lower answer relevancy as if it were an attempted answer. Retrieval metrics still include all six supported questions. The earlier 402 and a sandbox DNS failure were followed by a successful live run after the judge adapter was changed to normalize schemas like the production gateway.
+The evaluator clears tutor conversation history before every independent fixture question. On this run it answered all six supported questions and refused both unsupported ones. A separate three-repeat coverage evaluation, also resetting tutor history per question, answered 17 of 18 supported attempts (94.4%); the convoy-effect question was answered in two of three attempts. See [the repeated coverage report](tutor-coverage.md) and its raw JSON results. The evaluator reports answer coverage separately so refusals do not distort answer-quality averages. Retrieval metrics cover all six supported questions. Earlier 402 and sandbox DNS failures were resolved; live Cerebras tutoring and judging now succeed.
 
 ## Reproduce
 
@@ -34,4 +34,4 @@ Use `--max-cases 1` for a small connection smoke run. The default evaluates all 
 
 ## Interpretation limits
 
-The fixture contains synthetic short excerpts and six supported questions. The same configured Cerebras model is used for generation and judging, so these are model-based estimates, not independent human ratings. The strong scores apply to only four answers; the 4/6 answer coverage and two false refusals are material limits. The metrics do not assess generated quiz correctness, ambiguity, learner gains, or exact-question repetition. Preserve the JSON result and report both scores and coverage in any submission summary.
+The fixture contains synthetic short excerpts and six supported questions. The same configured Cerebras model is used for generation and judging, so these are model-based estimates, not independent human ratings. The samples are small and coverage varied across runs (6/6 once; 17/18 across three repeats), so the single full-run result is not a guarantee of consistent responses. The metrics do not assess generated quiz correctness, ambiguity, learner gains, or exact-question repetition. Preserve the JSON result and report scores, coverage, and these limits in any submission summary.

@@ -1,0 +1,433 @@
+{
+  "created_at": "2026-10-13T19:04:02.495128+00:00",
+  "fixture": "synthetic-os-course-v1",
+  "provider": "cerebras",
+  "generation_model": "qwen-3.8-27b",
+  "method": "Actual TutorService with tutor history cleared before each independent fixture question; each repeat uses the same question order",
+  "summary": {
+    "repeat_count": 3,
+    "supported_question_count": 6,
+    "supported_attempt_count": 18,
+    "answered_attempt_count": 14,
+    "overall_answer_coverage": 0.7777777777777778,
+    "mean_per_question_coverage": 0.7777777777777778,
+    "always_answered_question_count": 3,
+    "per_question": [
+      {
+        "query": "What is a process address space?",
+        "attempts": 3,
+        "answered": 3,
+        "coverage": 1.0
+      },
+      {
+        "query": "What do threads share?",
+        "attempts": 3,
+        "answered": 3,
+        "coverage": 1.0
+      },
+      {
+        "query": "List the necessary deadlock conditions",
+        "attempts": 3,
+        "answered": 2,
+        "coverage": 0.6666666666666666
+      },
+      {
+        "query": "Explain round robin time quantum",
+        "attempts": 3,
+        "answered": 2,
+        "coverage": 0.6666666666666666
+      },
+      {
+        "query": "What causes the convoy effect?",
+        "attempts": 3,
+        "answered": 1,
+        "coverage": 0.3333333333333333
+      },
+      {
+        "query": "How does a mutex protect a critical section?",
+        "attempts": 3,
+        "answered": 3,
+        "coverage": 1.0
+      }
+    ]
+  },
+  "runs": [
+    {
+      "repeat": 1,
+      "supported_cases": [
+        {
+          "query": "What is a process address space?",
+          "status": "answered",
+          "retrieved_evidence_count": 5,
+          "used_citation_count": 2,
+          "claims": [
+            {
+              "text": "A process is a program in execution, and each process has its own address space. The operating system saves the process state in a process control block during a context switch.",
+              "chunk_ids": [
+                "bea0d2bb-e8f3-5fc0-9dbb-508807b098a9"
+              ]
+            },
+            {
+              "text": "Threads within the same process share code, data, and open files, providing concurrent execution within one address space.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Each thread has its own stack and registers, but all threads belonging to a single process operate within that process's shared address space.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "What do threads share?",
+          "status": "answered",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 2,
+          "claims": [
+            {
+              "text": "Threads within the same process share code, data, and open files. This means all threads in a process operate within one common address space and can access the same program instructions, variables, and file descriptors.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Despite sharing those resources, each thread maintains its own stack and registers, so each thread has independent call state and CPU register values.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Threads provide concurrent execution within one address space, meaning multiple threads can make progress at the same time while reading and writing the same shared data.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Because threads share data, a race condition can occur when the result depends on the interleaving of concurrent accesses to that shared data. A mutex protects a critical section by allowing only one thread to enter at a time, preventing such races.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "List the necessary deadlock conditions",
+          "status": "answered",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 1,
+          "claims": [
+            {
+              "text": "Deadlock occurs when a set of processes waits forever for resources held by another member of the set.",
+              "chunk_ids": [
+                "1d488db4-2ad3-5201-a917-3afdd55b74b5"
+              ]
+            },
+            {
+              "text": "The four necessary deadlock conditions are: (1) mutual exclusion, (2) hold and wait, (3) no preemption, and (4) circular wait. All four must hold simultaneously for a deadlock to occur.",
+              "chunk_ids": [
+                "1d488db4-2ad3-5201-a917-3afdd55b74b5"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "Explain round robin time quantum",
+          "status": "answered",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 1,
+          "claims": [
+            {
+              "text": "In round robin scheduling, each ready process is given a fixed time quantum \u2014 a predetermined amount of CPU time during which it may execute.",
+              "chunk_ids": [
+                "11b5d69d-9300-517b-9b16-c723cdae4553"
+              ]
+            },
+            {
+              "text": "When a process's time quantum expires, that running process is moved to the back of the ready queue, allowing the next process in line to receive its own quantum.",
+              "chunk_ids": [
+                "11b5d69d-9300-517b-9b16-c723cdae4553"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "What causes the convoy effect?",
+          "status": "unsupported",
+          "retrieved_evidence_count": 1,
+          "used_citation_count": 0,
+          "claims": []
+        },
+        {
+          "query": "How does a mutex protect a critical section?",
+          "status": "answered",
+          "retrieved_evidence_count": 1,
+          "used_citation_count": 1,
+          "claims": [
+            {
+              "text": "A race condition occurs when the result depends on the interleaving of concurrent accesses to shared data.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            },
+            {
+              "text": "A mutex protects a critical section by allowing only one thread to enter at a time.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "supported_cases": [
+        {
+          "query": "What is a process address space?",
+          "status": "answered",
+          "retrieved_evidence_count": 5,
+          "used_citation_count": 2,
+          "claims": [
+            {
+              "text": "A process is a program in execution, and each process has its own address space. The operating system saves the process state in a process control block during a context switch.",
+              "chunk_ids": [
+                "bea0d2bb-e8f3-5fc0-9dbb-508807b098a9"
+              ]
+            },
+            {
+              "text": "Threads within the same process share code, data, and open files. Each thread has its own stack and registers. Threads provide concurrent execution within one address space.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "What do threads share?",
+          "status": "answered",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 2,
+          "claims": [
+            {
+              "text": "Threads within the same process share code, data, and open files. This means all threads in a process operate within one common address space and can access the same variables and resources.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Despite sharing code, data, and open files, each thread has its own stack and registers, so each thread maintains its own execution state (local variables, return addresses, instruction pointer).",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Threads provide concurrent execution within one address space, meaning multiple threads can make progress at the same time while reading and writing the same shared memory.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Because threads share data, a race condition can occur when the result depends on the interleaving of concurrent accesses to that shared data.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            },
+            {
+              "text": "A mutex protects a critical section by allowing only one thread to enter at a time, which is a common way to prevent race conditions on shared data.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "List the necessary deadlock conditions",
+          "status": "unsupported",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 0,
+          "claims": []
+        },
+        {
+          "query": "Explain round robin time quantum",
+          "status": "unsupported",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 0,
+          "claims": []
+        },
+        {
+          "query": "What causes the convoy effect?",
+          "status": "unsupported",
+          "retrieved_evidence_count": 1,
+          "used_citation_count": 0,
+          "claims": []
+        },
+        {
+          "query": "How does a mutex protect a critical section?",
+          "status": "answered",
+          "retrieved_evidence_count": 1,
+          "used_citation_count": 1,
+          "claims": [
+            {
+              "text": "A race condition occurs when the result depends on the interleaving of concurrent accesses to shared data. This is the problem a mutex is designed to prevent.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            },
+            {
+              "text": "A mutex protects a critical section by allowing only one thread to enter at a time, ensuring that concurrent threads cannot interleave their accesses to the shared data within that section.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repeat": 3,
+      "supported_cases": [
+        {
+          "query": "What is a process address space?",
+          "status": "answered",
+          "retrieved_evidence_count": 5,
+          "used_citation_count": 2,
+          "claims": [
+            {
+              "text": "A process is a program in execution, and each process has its own address space. The operating system saves the process state in a process control block during a context switch.",
+              "chunk_ids": [
+                "bea0d2bb-e8f3-5fc0-9dbb-508807b098a9"
+              ]
+            },
+            {
+              "text": "Threads within the same process share code, data, and open files. Each thread has its own stack and registers. Threads provide concurrent execution within one address space.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "What do threads share?",
+          "status": "answered",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 2,
+          "claims": [
+            {
+              "text": "Threads within the same process share code, data, and open files. This means all threads in a process operate in the same address space and can access the same variables and resources.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Each thread has its own stack and registers, so while the shared resources are common, the per-thread execution state (local variables, call stack, CPU registers) is private to that thread.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Threads provide concurrent execution within one address space, meaning multiple threads can run simultaneously while sharing the same memory layout.",
+              "chunk_ids": [
+                "f8f05b04-1b58-5da6-9435-4ff086056f2d"
+              ]
+            },
+            {
+              "text": "Because threads share data, a race condition can occur when the result depends on the interleaving of concurrent accesses to that shared data. A mutex protects a critical section by allowing only one thread to enter at a time.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "List the necessary deadlock conditions",
+          "status": "answered",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 1,
+          "claims": [
+            {
+              "text": "Deadlock occurs when a set of processes waits forever for resources held by another member of the set.",
+              "chunk_ids": [
+                "1d488db4-2ad3-5201-a917-3afdd55b74b5"
+              ]
+            },
+            {
+              "text": "The four necessary deadlock conditions are: mutual exclusion, hold and wait, no preemption, and circular wait.",
+              "chunk_ids": [
+                "1d488db4-2ad3-5201-a917-3afdd55b74b5"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "Explain round robin time quantum",
+          "status": "answered",
+          "retrieved_evidence_count": 2,
+          "used_citation_count": 1,
+          "claims": [
+            {
+              "text": "Round robin scheduling gives each ready process a fixed time quantum, meaning every process in the ready queue is allocated the same predetermined amount of CPU time before it must yield.",
+              "chunk_ids": [
+                "11b5d69d-9300-517b-9b16-c723cdae4553"
+              ]
+            },
+            {
+              "text": "When a process's time quantum expires, the running process is moved to the back of the ready queue, allowing other waiting processes to get their turn at the CPU.",
+              "chunk_ids": [
+                "11b5d69d-9300-517b-9b16-c723cdae4553"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "What causes the convoy effect?",
+          "status": "answered",
+          "retrieved_evidence_count": 1,
+          "used_citation_count": 1,
+          "claims": [
+            {
+              "text": "In First Come First Served (FCFS) scheduling, ready processes are run in the order they arrive.",
+              "chunk_ids": [
+                "b8598cf0-63ce-5a28-b2d9-10fddaa631d5"
+              ]
+            },
+            {
+              "text": "The convoy effect is caused by a long CPU burst that delays shorter jobs behind it in the FCFS queue.",
+              "chunk_ids": [
+                "b8598cf0-63ce-5a28-b2d9-10fddaa631d5"
+              ]
+            }
+          ]
+        },
+        {
+          "query": "How does a mutex protect a critical section?",
+          "status": "answered",
+          "retrieved_evidence_count": 1,
+          "used_citation_count": 1,
+          "claims": [
+            {
+              "text": "A race condition occurs when the result depends on the interleaving of concurrent accesses to shared data. In other words, if two threads read or write the same data at the same time, the final outcome can change depending on which thread's operations happen first.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            },
+            {
+              "text": "A mutex protects a critical section by allowing only one thread to enter at a time. This means that while one thread is inside the critical section, any other thread that tries to enter must wait until the first thread exits, preventing the interleaving that causes race conditions.",
+              "chunk_ids": [
+                "03b231da-42e0-5d8a-8d27-daa4e8782aae"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Only six supported questions from a small synthetic fixture are used.",
+    "The result measures response coverage and repeat stability, not answer faithfulness or learning outcomes.",
+    "Provider sampling may vary; three repeats are not a reliability guarantee.",
+    "Unsupported-question refusal is measured separately in the DeepEval report."
+  ]
+}

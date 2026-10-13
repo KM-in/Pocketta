@@ -1,31 +1,53 @@
 {
   "framework": "DeepEval",
   "framework_version": "4.2.0",
-  "created_at": "2026-10-13T18:37:24.082591+00:00",
+  "created_at": "2026-10-13T19:06:58.193362+00:00",
   "fixture": "synthetic-os-course-v1",
   "provider": "cerebras",
   "generation_model": "qwen-3.8-27b",
   "judge_model": "cerebras:qwen-3.8-27b",
+  "case_method": "Tutor history cleared before every independent fixture question",
   "retrieval_mode": [
     "keyword"
   ],
   "supported_case_count": 6,
+  "answered_supported_case_count": 6,
+  "supported_answer_coverage": 1.0,
+  "supported_refusal_count": 0,
   "unsupported_case_count": 2,
   "mean_metrics": {
     "FaithfulnessMetric": 1.0,
-    "AnswerRelevancyMetric": 0.96875,
+    "AnswerRelevancyMetric": 0.9722222222222222,
     "ContextualPrecisionMetric": 0.9722222222222222,
     "ContextualRecallMetric": 1.0
+  },
+  "metric_case_counts": {
+    "FaithfulnessMetric": 6,
+    "AnswerRelevancyMetric": 6,
+    "ContextualPrecisionMetric": 6,
+    "ContextualRecallMetric": 6
   },
   "unsupported_refusal_accuracy": 1.0,
   "supported_cases": [
     {
       "query": "What is a process address space?",
-      "tutor_status": "unsupported",
-      "tutor_answer": "The uploaded course material does not provide enough evidence to answer this question.",
-      "retrieved_count": 3,
+      "tutor_status": "answered",
+      "answer_quality_scored": true,
+      "tutor_answer": "A process is a program in execution, and each process has its own address space. The operating system saves the process state in a process control block during a context switch. Threads within the same process share code, data, and open files, and provide concurrent execution within one address space. Each thread has its own stack and registers.",
+      "retrieved_count": 5,
+      "metric_context_count": 3,
       "retrieval_mode": "keyword",
       "metrics": {
+        "FaithfulnessMetric": {
+          "score": 1.0,
+          "reason": "The score is 1.00 because the actual output is fully faithful to the retrieval context with no contradictions detected. Great job staying accurate and on point!",
+          "success": true
+        },
+        "AnswerRelevancyMetric": {
+          "score": 0.8333333333333334,
+          "reason": "The score is 0.83 because the answer largely addresses what a process address space is, but it includes a tangent about context switching and process control blocks, which is a separate aspect of process management and not directly relevant to explaining the concept of a process address space.",
+          "success": true
+        },
         "ContextualPrecisionMetric": {
           "score": 0.8333333333333333,
           "reason": "The score is 0.83 because the first retrieval context node is relevant, mentioning that 'Threads provide concurrent execution within one address space,' which supports the concept of a process address space. However, the second node is irrelevant, discussing 'Round robin scheduling gives each ready process a fixed time quantum' and queue management, which has nothing to do with address spaces. This irrelevant node is ranked above the third node, which directly states 'A process is a program in execution. Each process has its own address space'\u2014the most directly relevant content. Because the irrelevant scheduling node sits between the two relevant nodes, the second relevant node's precision is diluted (2/3 rather than 1), bringing the average precision down from a perfect 1.0 to 0.83.",
@@ -36,16 +58,27 @@
           "reason": "The score is 1.00 because the sentence in the expected output is fully supported by node 3 in retrieval context, which states 'A process is a program in execution. Each process has its own address space.' \u2014 a perfect match! Great recall!",
           "success": true
         }
-      },
-      "answer_quality_scored": false
+      }
     },
     {
       "query": "What do threads share?",
-      "tutor_status": "unsupported",
-      "tutor_answer": "The uploaded course material does not provide enough evidence to answer this question.",
+      "tutor_status": "answered",
+      "answer_quality_scored": true,
+      "tutor_answer": "Threads within the same process share code, data, and open files. Each thread has its own stack and registers, which are not shared with other threads in the process. Threads provide concurrent execution within one address space, meaning they operate in the same memory region of a single process.",
       "retrieved_count": 2,
+      "metric_context_count": 2,
       "retrieval_mode": "keyword",
       "metrics": {
+        "FaithfulnessMetric": {
+          "score": 1.0,
+          "reason": "The score is 1.00 because the actual output is fully faithful to the retrieval context with no contradictions detected. Great job staying accurate and on point!",
+          "success": true
+        },
+        "AnswerRelevancyMetric": {
+          "score": 1.0,
+          "reason": "The score is 1.00 because the answer directly and fully addresses what threads share, with no irrelevant statements detected. A clean, on-point response \u2014 nicely done!",
+          "success": true
+        },
         "ContextualPrecisionMetric": {
           "score": 1.0,
           "reason": "The score is 1.00 because the first node in retrieval contexts directly answers the question by stating 'Threads within the same process share code, data, and open files. Each thread has its own stack and registers,' while the second node, which discusses 'A race condition occurs when the result depends on the interleaving of concurrent accesses to shared data' and mutexes, is irrelevant to the question. The relevant node is perfectly ranked above the irrelevant one \u2014 a clean sweep!",
@@ -56,14 +89,15 @@
           "reason": "The score is 1.00 because the sentence in the expected output is fully supported by node 1 in retrieval context, which directly states that threads within the same process share code, data, and open files, and each thread has its own stack and registers. A perfect match!",
           "success": true
         }
-      },
-      "answer_quality_scored": false
+      }
     },
     {
       "query": "List the necessary deadlock conditions",
       "tutor_status": "answered",
-      "tutor_answer": "Deadlock occurs when a set of processes waits forever for resources held by another member of the set. The four necessary deadlock conditions are: mutual exclusion, hold and wait, no preemption, and circular wait. All four must hold simultaneously for a deadlock to occur.",
+      "answer_quality_scored": true,
+      "tutor_answer": "Deadlock occurs when a set of processes waits forever for resources held by another member of the set. The four necessary deadlock conditions are: mutual exclusion, hold and wait, no preemption, and circular wait.",
       "retrieved_count": 2,
+      "metric_context_count": 2,
       "retrieval_mode": "keyword",
       "metrics": {
         "FaithfulnessMetric": {
@@ -86,14 +120,15 @@
           "reason": "The score is 1.00 because the expected output sentence is fully supported by node 1 in retrieval context, which explicitly lists all four deadlock conditions (mutual exclusion, hold and wait, no preemption, and circular wait) matching the output perfectly. Great recall!",
           "success": true
         }
-      },
-      "answer_quality_scored": true
+      }
     },
     {
       "query": "Explain round robin time quantum",
       "tutor_status": "answered",
-      "tutor_answer": "In round robin scheduling, each ready process is given a fixed time quantum to execute on the CPU. This means the scheduler allocates a predetermined, equal slice of processor time to every process in the ready queue. When a process's time quantum expires, the running process is moved to the back of the ready queue, allowing the next process in line to receive its own quantum. This creates a fair, cyclic rotation among all ready processes.",
+      "answer_quality_scored": true,
+      "tutor_answer": "In round robin scheduling, each ready process is given a fixed time quantum to execute on the CPU. When a process's time quantum expires, that running process is moved to the back of the ready queue, allowing the next process in line to run.",
       "retrieved_count": 2,
+      "metric_context_count": 2,
       "retrieval_mode": "keyword",
       "metrics": {
         "FaithfulnessMetric": {
@@ -116,14 +151,15 @@
           "reason": "The score is 1.00 because the sentence in the expected output is fully supported by node 1 in retrieval context, which directly states that each ready process is given a fixed time quantum and returns to the back of the ready queue upon expiration. A perfect match!",
           "success": true
         }
-      },
-      "answer_quality_scored": true
+      }
     },
     {
       "query": "What causes the convoy effect?",
       "tutor_status": "answered",
-      "tutor_answer": "First come first served (FCFS) scheduling runs ready processes in the order they arrive. The convoy effect is caused by a long CPU burst in FCFS scheduling: because processes run strictly in arrival order, a single long-running job holds the CPU and delays all shorter jobs that arrived after it, making them wait in a 'convoy' behind it. By contrast, round robin scheduling avoids this by giving each ready process a fixed time quantum; when the quantum expires, the running process is sent to the back of the ready queue, so no single process can monopolize the CPU for an extended period.",
+      "answer_quality_scored": true,
+      "tutor_answer": "First come first served (FCFS) scheduling runs ready processes in arrival order. The convoy effect is caused by a long CPU burst in FCFS scheduling that delays shorter jobs waiting behind it.",
       "retrieved_count": 1,
+      "metric_context_count": 1,
       "retrieval_mode": "keyword",
       "metrics": {
         "FaithfulnessMetric": {
@@ -132,8 +168,8 @@
           "success": true
         },
         "AnswerRelevancyMetric": {
-          "score": 0.875,
-          "reason": "The score is 0.88 because the answer largely addresses the cause of the convoy effect, but it includes a description of round robin scheduling mechanics that is unrelated to the question, slightly diluting the focus and preventing a higher score.",
+          "score": 1.0,
+          "reason": "The score is 1.00 because the answer directly and fully addresses the question about what causes the convoy effect, with no irrelevant statements detected. Nicely on point!",
           "success": true
         },
         "ContextualPrecisionMetric": {
@@ -146,14 +182,15 @@
           "reason": "The score is 1.00 because the expected output sentence is fully supported by node 1 in retrieval context, which explicitly describes how a long CPU burst in FCFS scheduling delays shorter jobs. Great match!",
           "success": true
         }
-      },
-      "answer_quality_scored": true
+      }
     },
     {
       "query": "How does a mutex protect a critical section?",
       "tutor_status": "answered",
-      "tutor_answer": "A race condition occurs when the result of a program depends on the interleaving of concurrent accesses to shared data. This is the problem a mutex is designed to prevent. A mutex protects a critical section by allowing only one thread to enter at a time. In other words, when a thread acquires the mutex, no other thread can enter the protected region until the first thread releases it, eliminating the harmful interleaving that causes race conditions.",
+      "answer_quality_scored": true,
+      "tutor_answer": "A mutex protects a critical section by allowing only one thread to enter at a time. A race condition occurs when the result depends on the interleaving of concurrent accesses to shared data, which is the problem a mutex's mutual-exclusion mechanism prevents.",
       "retrieved_count": 1,
+      "metric_context_count": 1,
       "retrieval_mode": "keyword",
       "metrics": {
         "FaithfulnessMetric": {
@@ -176,8 +213,7 @@
           "reason": "The score is 1.00 because the sentence in the expected output is fully supported by node 1 in retrieval context, which directly states that a mutex allows only one thread to enter at a time. Great match!",
           "success": true
         }
-      },
-      "answer_quality_scored": true
+      }
     }
   ],
   "unsupported_cases": [
@@ -193,25 +229,8 @@
   "limitations": [
     "The held-out fixture contains synthetic short excerpts and only six supported questions.",
     "Judge metrics are model-based estimates and were scored with the configured provider/model shown above.",
-    "This run does not evaluate question quality or real learner outcomes.",
-    "Semantic embeddings are omitted when no embedding service is configured; retrieval mode is recorded per case.",
     "Faithfulness and answer relevancy are averaged over answered supported cases; answer coverage is reported separately. Context precision and recall cover all supported fixture cases.",
-    "One isolated replay of a question refused in the full run was answered and verified; this single replay is anecdotal and is not included in the full-run metrics."
-  ],
-  "answered_supported_case_count": 4,
-  "supported_answer_coverage": 0.6666666666666666,
-  "supported_refusal_count": 2,
-  "metric_case_counts": {
-    "FaithfulnessMetric": 4,
-    "AnswerRelevancyMetric": 4,
-    "ContextualPrecisionMetric": 6,
-    "ContextualRecallMetric": 6
-  },
-  "follow_up_replay": {
-    "query": "What is a process address space?",
-    "status": "answered",
-    "claims_semantically_verified": true,
-    "included_in_full_run_metrics": false,
-    "notes": "One isolated replay of a question refused in the full run was answered and verified. This single replay is anecdotal and does not establish stable answer coverage."
-  }
+    "This run does not evaluate question quality or real learner outcomes.",
+    "Semantic embeddings are omitted when no embedding service is configured; retrieval mode is recorded per case."
+  ]
 }

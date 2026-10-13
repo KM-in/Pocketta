@@ -127,7 +127,12 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
 
         supported_results = []
         for question in questions:
+            with db._connect() as connection:
+                connection.execute(
+                    "DELETE FROM tutor_turns WHERE course_id=?", (course["id"],)
+                )
             bundle = await knowledge.retrieve(course["id"], question["query"], 3)
+            tutor_bundle = await knowledge.retrieve(course["id"], question["query"], 6)
             turn = await tutor.ask(course["id"], question["query"], "explain")
             actual_output = " ".join(claim["text"] for claim in turn["claims"])
             answered = turn["status"] == "answered" and bool(actual_output.strip())
@@ -160,7 +165,8 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
                     "tutor_status": turn["status"],
                     "answer_quality_scored": answered,
                     "tutor_answer": actual_output,
-                    "retrieved_count": len(bundle.items),
+                    "retrieved_count": len(tutor_bundle.items),
+                    "metric_context_count": len(bundle.items),
                     "retrieval_mode": bundle.retrieval_mode,
                     "metrics": metric_results,
                 }
@@ -168,6 +174,10 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
 
         unsupported = []
         for question in (q for q in fixture["questions"] if not q["expected"]):
+            with db._connect() as connection:
+                connection.execute(
+                    "DELETE FROM tutor_turns WHERE course_id=?", (course["id"],)
+                )
             turn = await tutor.ask(course["id"], question["query"], "explain")
             unsupported.append(
                 {"query": question["query"], "tutor_status": turn["status"]}
@@ -199,6 +209,7 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
             "provider": settings.model_provider,
             "generation_model": settings.text_model,
             "judge_model": judge.get_model_name(),
+            "case_method": "Tutor history cleared before every independent fixture question",
             "retrieval_mode": sorted(
                 {result["retrieval_mode"] for result in supported_results}
             ),
