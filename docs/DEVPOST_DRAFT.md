@@ -36,11 +36,11 @@ PocketTA joins provenance-preserving multimodal course ingestion, claim-level tu
 
 ## Evaluation
 
-On a small synthetic operating-systems fixture using offline keyword retrieval, the current smoke evaluation retrieved all 6 expected source locations, with mean context precision **0.639** and mean context recall **1.000**. Both unsupported queries returned no evidence (**2/2**). This fixture is small and synthetic; it does not establish live semantic-search performance, tutor faithfulness, answer relevance, or question correctness.
+On a small synthetic operating-systems fixture using offline keyword retrieval, the smoke evaluation retrieved all 6 expected source locations, with mean context precision **0.639** and mean context recall **1.000**. Both unsupported queries returned no evidence (**2/2**). A live DeepEval run with Cerebras on the same fixture scored faithfulness **1.000** and answer relevancy **0.969** across the **4** supported questions the tutor answered; context precision was **0.972** and recall **1.000** across all **6** supported questions. The tutor answered **4/6 (66.7%)** supported questions and incorrectly refused two despite retrieved evidence. It correctly refused both unsupported questions (**2/2**). This is a small synthetic evaluation; the same model generated and judged answers, and results do not establish live semantic-search performance, generated-question correctness, or learning gains.
 
 A deterministic toy simulation compared adaptive topic/difficulty selection with a fixed medium-difficulty topic rotation over three hand-authored learner profiles and six sessions each. Across 90 simulated questions per strategy, adaptive selection produced **0.567 vs 0.544** response accuracy, **0.204 vs 0.196** mean simulated skill gain, and **0.633 vs 0.867** repeated topic/difficulty-pair rate. A second simulator now runs 180 attempts through PocketTA's saved quiz and grading path using 12 hand-authored source-backed items. It produced tied average simulated accuracy (**0.544** each), mean skill gain **0.211 vs 0.196**, and exact saved-question ID repetition **0.633 vs 0.867**. Both simulations use programmed learner profiles and learning assumptions; neither is evidence of real learning. The second simulation does not evaluate model-generated question quality.
 
-The repository now includes a DeepEval evaluator for faithfulness, answer relevance, and context precision/recall on actual tutor outputs; its first live run could not complete because the configured provider returned HTTP 402 before scoring. Do not claim framework results until a successful run writes scores. A larger labeled set, question correctness/ambiguity, and repetition evaluation remain before submission. See [the evaluation runbook](evaluation/track-d-deepeval.md).
+The per-case DeepEval results and limitations are documented in [the evaluation report](evaluation/track-d-deepeval.md). A larger labeled set, generated-question correctness/ambiguity, repetition evaluation, and stronger answer coverage remain before submission.
 
 ## Demo outline
 
@@ -52,6 +52,6 @@ Record a 3–10 minute walkthrough showing: upload and processing of course sour
 - [ ] Record and review the demo; verify the link works signed out.
 - [x] Backend dependencies verified (`pip check` clean), all 139 backend tests pass, 46 frontend tests pass on latest `main`, and the production build succeeds.
 - [ ] Validate the configured provider flow, real legacy PPT conversion, and video timestamp navigation.
-- [ ] Run and publish a framework-based evaluation on a documented test set.
+- [x] Run and publish a framework-based evaluation on the documented synthetic test set; see its coverage and limitations above.
 - [ ] Review all metrics, screenshots, and claims against the final build.
 - [ ] Submit the completed entry through the team's Devpost account.

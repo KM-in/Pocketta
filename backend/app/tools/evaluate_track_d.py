@@ -28,6 +28,7 @@ from deepeval.test_case import LLMTestCase
 from ..config import Settings
 from ..courses import CourseStore
 from ..database import Database
+from ..services.gateway import strict_schema
 from ..services.knowledge import KnowledgeService
 from ..services.providers import text_adapter
 from ..services.tutor import TutorService, initialize_tutor
@@ -66,7 +67,7 @@ class CerebrasJudge(DeepEvalBaseLLM):
                 "json_schema": {
                     "name": getattr(schema, "__name__", "deepeval_result").lower(),
                     "strict": True,
-                    "schema": schema_json,
+                    "schema": strict_schema(schema_json),
                 },
             }
         return self.adapter.chat_payload(payload)
@@ -129,7 +130,8 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
             bundle = await knowledge.retrieve(course["id"], question["query"], 3)
             turn = await tutor.ask(course["id"], question["query"], "explain")
             actual_output = " ".join(claim["text"] for claim in turn["claims"])
-            if turn["status"] != "answered" or not actual_output.strip():
+            answered = turn["status"] == "answered" and bool(actual_output.strip())
+            if not answered:
                 actual_output = "The uploaded course material does not provide enough evidence to answer this question."
             case = LLMTestCase(
                 input=question["query"],
@@ -140,6 +142,12 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
             )
             metric_results = {}
             for metric in metrics:
+                # Answer-quality metrics apply only when the tutor answered.
+                # Retrieval metrics still apply to all supported questions.
+                if not answered and not isinstance(
+                    metric, (ContextualPrecisionMetric, ContextualRecallMetric)
+                ):
+                    continue
                 metric.measure(case)
                 metric_results[metric.__class__.__name__] = {
                     "score": metric.score,
@@ -150,6 +158,7 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
                 {
                     "query": question["query"],
                     "tutor_status": turn["status"],
+                    "answer_quality_scored": answered,
                     "tutor_answer": actual_output,
                     "retrieved_count": len(bundle.items),
                     "retrieval_mode": bundle.retrieval_mode,
@@ -165,12 +174,23 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
             )
 
         score_names = [metric.__class__.__name__ for metric in metrics]
-        summary = {
-            name: statistics.mean(
-                result["metrics"][name]["score"] for result in supported_results
-            )
+        metric_case_counts = {
+            name: sum(name in result["metrics"] for result in supported_results)
             for name in score_names
         }
+        summary = {
+            name: statistics.mean(
+                result["metrics"][name]["score"]
+                for result in supported_results
+                if name in result["metrics"]
+            )
+            if metric_case_counts[name]
+            else None
+            for name in score_names
+        }
+        answered_count = sum(
+            result["answer_quality_scored"] for result in supported_results
+        )
         report = {
             "framework": "DeepEval",
             "framework_version": version("deepeval"),
@@ -183,8 +203,12 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
                 {result["retrieval_mode"] for result in supported_results}
             ),
             "supported_case_count": len(supported_results),
+            "answered_supported_case_count": answered_count,
+            "supported_answer_coverage": answered_count / len(supported_results),
+            "supported_refusal_count": len(supported_results) - answered_count,
             "unsupported_case_count": len(unsupported),
             "mean_metrics": summary,
+            "metric_case_counts": metric_case_counts,
             "unsupported_refusal_accuracy": sum(
                 result["tutor_status"] == "unsupported" for result in unsupported
             )
@@ -196,6 +220,7 @@ async def evaluate(output_path: Path, *, max_cases: int = 6):
             "limitations": [
                 "The held-out fixture contains synthetic short excerpts and only six supported questions.",
                 "Judge metrics are model-based estimates and were scored with the configured provider/model shown above.",
+                "Faithfulness and answer relevancy are averaged over answered supported cases; answer coverage is reported separately. Context precision and recall cover all supported fixture cases.",
                 "This run does not evaluate question quality or real learner outcomes.",
                 "Semantic embeddings are omitted when no embedding service is configured; retrieval mode is recorded per case.",
             ],

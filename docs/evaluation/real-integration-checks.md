@@ -12,4 +12,4 @@ These checks use disposable synthetic files. No course documents or user media w
 
 ## Still unverified
 
-These checks do not call the configured vision model, test frame-description retrieval, or open the player in a browser to verify seeking after metadata loads. The configured Cerebras endpoint returned HTTP 402 during the separate DeepEval tutor smoke run, so live visual analysis also remains unverified.
+These checks do not call the configured vision model, test frame-description retrieval, or open the player in a browser to verify seeking after metadata loads. A separate text tutor/judge DeepEval run later succeeded, but that does not verify video-frame vision or browser seeking; those multimodal checks remain open.

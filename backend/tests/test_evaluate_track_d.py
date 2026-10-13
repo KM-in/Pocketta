@@ -6,6 +6,7 @@ import httpx
 from pydantic import BaseModel
 
 from backend.app.config import Settings
+from backend.app.services.gateway import strict_schema
 from backend.app.tools.evaluate_track_d import CerebrasJudge
 
 
@@ -42,7 +43,9 @@ def test_cerebras_judge_sync_request_uses_configured_adapter(monkeypatch):
     assert judge.generate("score this", schema=JudgeOutput) == '{"ok":true}'
     assert captured["url"] == "https://judge.example/v1/chat/completions"
     assert captured["headers"] == {"Authorization": "Bearer test-secret"}
-    assert captured["json"]["response_format"]["json_schema"]["schema"] == JudgeOutput.model_json_schema()
+    assert captured["json"]["response_format"]["json_schema"]["schema"] == strict_schema(
+        JudgeOutput.model_json_schema()
+    )
     assert captured["json"]["max_tokens"] == 2048
 
 

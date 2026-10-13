@@ -2,9 +2,18 @@
 
 ## Status
 
-The evaluator is implemented in `backend/app/tools/evaluate_track_d.py` and uses DeepEval 4.2.0. It creates a temporary course from `os-course.json`, indexes the synthetic excerpts using configured retrieval, asks the actual PocketTA `TutorService` the six supported questions, and measures DeepEval Faithfulness, Answer Relevancy, Contextual Precision, and Contextual Recall. It also checks whether the tutor refuses the two unsupported queries. The configured Cerebras model is used as the DeepEval judge.
+The evaluator uses DeepEval 4.2.0 and runs the actual PocketTA tutor over the six supported and two unsupported questions in `os-course.json`. A live run completed on 14 October 2026 using Cerebras `qwen-3.8-27b` for tutor generation and as the LLM judge. The result is saved in [`track-d-deepeval-2026-10-14.json`](track-d-deepeval-2026-10-14.json).
 
-The one-question live smoke run did **not** produce a tutor answer or metric scores. Cerebras returned HTTP 402 during generation, before DeepEval scoring began. Treat all four DeepEval metrics as **not measured** until a successful run writes a result JSON. This failure is evidence of unavailable provider credit, not a zero score.
+| Measure | Result | Cases |
+|---|---:|---:|
+| Tutor faithfulness | 1.000 | 4 answered supported questions |
+| Answer relevancy | 0.969 | 4 answered supported questions |
+| Context precision | 0.972 | 6 supported questions |
+| Context recall | 1.000 | 6 supported questions |
+| Tutor answer coverage | 4/6 (66.7%) | 6 supported questions |
+| Unsupported-question refusal accuracy | 2/2 (100%) | 2 unsupported questions |
+
+The tutor conservatively refused two questions that the fixture marks as answerable: process address space and thread sharing. The evaluator reports answer coverage separately so a refusal cannot inflate faithfulness or lower answer relevancy as if it were an attempted answer. Retrieval metrics still include all six supported questions. The earlier 402 and a sandbox DNS failure were followed by a successful live run after the judge adapter was changed to normalize schemas like the production gateway.
 
 ## Reproduce
 
@@ -18,11 +27,11 @@ Configure `MODEL_PROVIDER=cerebras` and a funded `CEREBRAS_API_KEY`. Embeddings 
 
 ```sh
 python -m backend.app.tools.evaluate_track_d \
-  --output docs/evaluation/track-d-deepeval-2026-10-13.json
+  --output docs/evaluation/track-d-deepeval-2026-10-14.json
 ```
 
 Use `--max-cases 1` for a small connection smoke run. The default evaluates all six supported fixture questions plus two unsupported questions. It makes real generation, verification, and judge requests, so it requires provider access and may incur usage charges. It sends only the synthetic OS fixture and evaluation prompts; no uploaded course material is used.
 
 ## Interpretation limits
 
-The fixture contains synthetic short excerpts and six supported questions. The judge is the configured Cerebras model, so the results are model-based estimates, not human ratings. The four metrics assess answer grounding/relevance and retrieved context; they do not assess generated quiz correctness, ambiguity, learner gains, or exact-question repetition. The evaluator records the model identity, retrieval mode, per-case scores and judge reasons in the JSON result. Preserve that result with any submitted summary.
+The fixture contains synthetic short excerpts and six supported questions. The same configured Cerebras model is used for generation and judging, so these are model-based estimates, not independent human ratings. The strong scores apply to only four answers; the 4/6 answer coverage and two false refusals are material limits. The metrics do not assess generated quiz correctness, ambiguity, learner gains, or exact-question repetition. Preserve the JSON result and report both scores and coverage in any submission summary.
