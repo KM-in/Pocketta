@@ -1,6 +1,6 @@
 # Multimodal AI Hackathon 2026 · Track D status
 
-Reviewed on 13 October 2026 against the latest GitHub `main` branch and the Track D brief. The local `main` is aligned to `41bd8cf`; the learning-loop changes in this worktree remain uncommitted and unpublished. This status does not claim a live-provider evaluation or public demo.
+Reviewed on 13 October 2026 against the Track D brief. The work is published on GitHub `main` at `a5a9b90` (`Complete Track D hackathon submission work`). This status does not claim a live-provider evaluation or public demo.
 
 ## Implemented in the prototype
 
@@ -26,4 +26,4 @@ Reviewed on 13 October 2026 against the latest GitHub `main` branch and the Trac
 
 ## Submission handoff
 
-The public source repository exists and its `main` README is retrievable through GitHub's public-resource endpoint. That public branch still describes the pre-assessment build; the local learning-loop changes have not been published. The demo video and Devpost submission are not present in this repository. Kartik Mishra and Kartikeya Srivastava are the supplied team member names; their Devpost usernames are still needed. The local changes are reviewed and tested but remain uncommitted; publication to the public `main` awaits authorization. See the remaining verification and publication gates above before describing the project as submission-ready.
+The source repository is public and the submission work is published on `main` at `a5a9b90`. The demo video and Devpost submission are not present in this repository. Kartik Mishra and Kartikeya Srivastava are the supplied team member names; their Devpost usernames are still needed. Remaining gates include successful live-provider evaluation, real configured-flow checks, demo recording, and completing the Devpost entry. See the remaining verification gates above before describing the project as submission-ready.
