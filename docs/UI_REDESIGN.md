@@ -13,7 +13,7 @@ Pre-existing backend/provider edits were preserved in the named Git stash `Prese
 - **My courses:** course grid, real source counts, descriptions, loading/error recovery, native course dialog, and first-course onboarding only after a successful empty response.
 - **Shared shell:** 240px sidebar, optional compact sidebar, breadcrumbs, local runtime status, source-aware course navigation, mobile modal drawer, keyboard skip link, and saved light/dark theme.
 - **Overview and sources:** actual processing counts, quick actions, multi-file upload with the existing two-transfer concurrency, microphone/browser recording, source selection, separate source-opening links, batch indexing, and selected-source search.
-- **Study packs:** current multi-source generation, real job stages/progress, retry/cancel, stale warnings, verified notes and concepts, flashcard reveal, coverage gaps, original evidence, and links into the actual mixed quiz library.
+- **Study packs:** current multi-source generation, real job stages/progress, retry/cancel, stale warnings, verified notes and concepts, animated question/answer flip cards, coverage gaps, original evidence, and links into the actual mixed quiz library.
 - **Practice:** the existing custom quiz builder with question count/mix, difficulty, topic constraints, and instructions; immutable quiz library, resume/retake/review, answer autosave feedback, focused answering mode, source citations, short answers, grading progress, and real saved results. Leaving an attempt saves answers before returning to the library.
 - **Learning progress:** actual syllabus dimensions, topic observations, averages, backend mastery/weak-topic flags, uncertainty, feedback, and the learning report download. No invented completion values or inferred UI-side mastery rules.
 - **Syllabus:** Markdown input/upload, proposed source mappings, confirmation, studied markers, evidence links, and download.
@@ -54,3 +54,9 @@ No applicable project `AGENTS.md`, dedicated Playwright skill, or `web-design-gu
 - Source-level practice quizzes remain an immediate-feedback utility; durable attempts and learning history are provided by the current course quiz API.
 
 Restart the backend after changing from the old branch so its running process loads the new mainline's pack, quiz, learning, and syllabus routes. Restart the frontend if needed and open the URL printed by Vite.
+
+## Flashcard interaction
+
+Source-level and course-wide flashcards use the shared `Flashcard.tsx` component. The question appears on the front; clicking or pressing Enter/Space flips to the answer and back. CSS provides a reversible 420ms 3D rotation, with no transition under reduced-motion preferences. Both faces size the card so longer answers stay readable. Citations remain outside the toggle and print output includes both question and answer.
+
+Browser checks passed for both pack types at 360px and 1440px in both themes: click, keyboard activation, repeated toggles, reduced motion, retained citations, and no horizontal overflow. Results are in `output/ui-redesign-main/flashcard-verification.json`.

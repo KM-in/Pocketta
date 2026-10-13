@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import type { StudyPack } from "../types";
+import { Flashcard } from "./Flashcard";
 import { EvidenceLinks } from "./EvidenceLinks";
 
 type Tab = "notes" | "concepts" | "flashcards" | "quiz";
@@ -67,12 +68,9 @@ export function StudyPackView({ pack, initialTab = "notes" }: { pack: StudyPack;
           ))}
         {tab === "flashcards" &&
           pack.flashcards.map((card, index) => (
-            <article className="content-card flashcard" key={`${card.front}-${index}`}>
-              <p className="card-label">Recall · {index + 1} of {pack.flashcards.length}</p>
-              <h3>{card.front}</h3>
-              <details><summary>Reveal answer</summary><p>{card.back}</p></details>
+            <Flashcard key={`${card.front}-${index}`} question={card.front} answer={card.back} label={`Recall · ${index + 1} of ${pack.flashcards.length}`}>
               <EvidenceLinks ids={card.segment_ids} />
-            </article>
+            </Flashcard>
           ))}
         {tab === "quiz" &&
           pack.quiz.map((question, questionIndex) => {
