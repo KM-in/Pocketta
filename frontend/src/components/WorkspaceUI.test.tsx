@@ -36,10 +36,10 @@ describe("Workspace interactions", () => {
     expect(screen.getByRole("tab", { name: "concepts" })).toHaveFocus();
     expect(screen.getByRole("tab", { name: "concepts" })).toHaveAttribute("aria-selected", "true");
     fireEvent.click(screen.getByRole("tab", { name: "flashcards" }));
-    const summary = screen.getByText("Reveal answer");
-    expect(summary.parentElement).not.toHaveAttribute("open");
-    fireEvent.click(summary);
-    expect(summary.parentElement).toHaveAttribute("open");
+    const card = screen.getByRole("button", { name: "Question: What is a quantum? — show answer" });
+    expect(card).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(card);
+    expect(screen.getByRole("button", { name: "Answer: A fixed slice of processor time. — show question" })).toHaveAttribute("aria-pressed", "true");
   });
   it("opens practice directly and communicates answer correctness without relying on color", () => {
     render(<StudyPackView pack={pack} initialTab="quiz" />);

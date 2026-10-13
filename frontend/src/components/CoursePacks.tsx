@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Flashcard } from "./Flashcard";
 import { EmptyState, Icon } from "./WorkspaceUI";
 import { Link } from "react-router-dom";
 import { request } from "../api/client";
@@ -64,9 +65,11 @@ export function CoursePacks({ courseId, sourceIds, revision }: { courseId: strin
       {pack.sections.map(section => <section key={section.key}>
         <h3>{section.title}</h3>
         {section.status === "unsupported" && <p>Coverage gap: {section.reason}</p>}
-        {section.content.items.map((item, index) => <article className="content-card" key={`${item.kind}-${index}`}>
+        {section.content.items.map((item, index) => item.kind === "flashcard" ? <Flashcard key={`${item.kind}-${index}`} question={item.title} answer={item.text}>
+          <div className="pack-evidence">{item.chunk_ids.map(id => { const e = section.evidence.find(e => e.chunk_id === id); return e ? <Link className="text-button" key={id} to={citationHref(courseId, e)}>{citationLabel(e)}</Link> : null; })}</div>
+        </Flashcard> : <article className="content-card" key={`${item.kind}-${index}`}>
           <p className="eyebrow">{item.kind}</p><h4>{item.title}</h4>
-          {item.kind === "quiz" ? <><ol>{item.options.map((option, i) => <li key={i}>{option}</li>)}</ol><details><summary>Show answer</summary><p>{item.correct_answer != null ? item.options[item.correct_answer] : ""}</p><p>{item.text}</p></details></> : item.kind === "flashcard" ? <details><summary>Show answer</summary><p>{item.text}</p></details> : <p>{item.text}</p>}
+          {item.kind === "quiz" ? <><ol>{item.options.map((option, i) => <li key={i}>{option}</li>)}</ol><details><summary>Show answer</summary><p>{item.correct_answer != null ? item.options[item.correct_answer] : ""}</p><p>{item.text}</p></details></> : <p>{item.text}</p>}
           <div className="pack-evidence">{item.chunk_ids.map(id => { const e = section.evidence.find(e => e.chunk_id === id); return e ? <Link className="text-button" key={id} to={citationHref(courseId, e)}>{citationLabel(e)}</Link> : null; })}</div>
         </article>)}
       </section>)}
