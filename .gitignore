@@ -8,7 +8,7 @@
 .env
 .env.*
 !.env.example
-
+demo-analysis/
 # Python
 .venv/
 venv/

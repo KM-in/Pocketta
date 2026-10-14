@@ -143,9 +143,9 @@ class Settings(BaseSettings):
     faster_whisper_model_path: Path | None = None
     faster_whisper_model_name: str = "turbo"
     faster_whisper_compute_type: str = "float16"
-    faster_whisper_beam_size: int = 5
-    faster_whisper_batch_size: int = 8
-    faster_whisper_vad_filter: bool = False
+    faster_whisper_beam_size: int = Field(default=5, ge=1)
+    faster_whisper_batch_size: int = Field(default=8, ge=1)
+    faster_whisper_vad_filter: bool = True
     lm_studio_base_url: str = "http://127.0.0.1:1234/v1"
     lm_studio_model_id: str = ""
     lm_studio_api_key: str = ""

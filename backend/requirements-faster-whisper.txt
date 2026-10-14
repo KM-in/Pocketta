@@ -1,1 +1,9 @@
 faster-whisper>=1.1.0
+# faster-whisper 1.2.1 passes metadata_errors to av.open, removed in PyAV 19.
+av>=11,<19
+# Current CTranslate2 GPU builds require CUDA 12 and cuDNN 9.
+ctranslate2>=4.5,<5
+# On Windows, ship runtime DLLs with the venv; PocketTA registers their bin dirs.
+nvidia-cublas-cu12>=12,<13; sys_platform == "win32"
+nvidia-cudnn-cu12>=9,<10; sys_platform == "win32"
+nvidia-cuda-runtime-cu12>=12,<13; sys_platform == "win32"

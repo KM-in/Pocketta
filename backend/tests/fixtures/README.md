@@ -15,3 +15,11 @@ POCKETTA_TEST_WHISPER_CLI=/path/to/whisper-cli \
 ```
 
 It makes no cloud transcription, text-generation, vision, or embedding requests.
+
+The same test also covers Faster Whisper when its CUDA runtime and a local model are prepared. Tests ignore `.env`; pass model settings explicitly using `POCKETTA_TEST_FASTER_WHISPER_MODEL`, `POCKETTA_TEST_FASTER_WHISPER_MODEL_NAME`, and `POCKETTA_TEST_FASTER_WHISPER_COMPUTE_TYPE`. For example, on Windows:
+
+```powershell
+$env:POCKETTA_TEST_FASTER_WHISPER_MODEL = 'D:/models/whisper-ct2'
+$env:POCKETTA_TEST_FASTER_WHISPER_COMPUTE_TYPE = 'int8'
+.venv/Scripts/python.exe -m pytest backend/tests/test_transcription_integration.py -q
+```

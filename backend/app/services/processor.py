@@ -284,7 +284,12 @@ class LectureProcessor:
                     "transcribing",
                     LectureStatus.TRANSCRIBING,
                     20,
-                    "Transcribing locally with whisper.cpp",
+                    "Transcribing locally with "
+                    + (
+                        "Faster Whisper"
+                        if self.transcription.selected_backend() == "faster_whisper"
+                        else "whisper.cpp"
+                    ),
                 )
                 transcript = await self.blocking(
                     self.transcription.transcribe, lecture_id, normalized, duration_ms

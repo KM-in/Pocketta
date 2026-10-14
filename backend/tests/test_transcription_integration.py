@@ -14,8 +14,7 @@ from fastapi.testclient import TestClient
 from backend.app.config import Settings
 from backend.app.main import create_app
 from backend.app.models import Concept, Flashcard, Note, QuizQuestion, StudyPack
-from backend.app.services.whisper import whisper_cpp_readiness
-
+from backend.app.services.whisper import faster_whisper_readiness, whisper_cpp_readiness
 
 FIXTURE = Path(__file__).parent / "fixtures" / "transcription" / "lecture.mp4"
 
@@ -46,11 +45,39 @@ def _local_whisper_settings() -> tuple[Settings | None, str]:
     return settings, ""
 
 
-def test_uploaded_recording_is_transcribed_by_local_whisper(tmp_path: Path) -> None:
-    settings, reason = _local_whisper_settings()
+@pytest.mark.parametrize("backend", ["whisper_cpp", "faster_whisper"])
+def test_uploaded_recording_is_transcribed_by_local_whisper(
+    tmp_path: Path, backend: str
+) -> None:
+    if backend == "faster_whisper":
+        configured = Settings()
+        settings = Settings(
+            _env_file=None,
+            transcription_backend="faster_whisper",
+            faster_whisper_model_path=os.getenv("POCKETTA_TEST_FASTER_WHISPER_MODEL")
+            or configured.faster_whisper_model_path,
+            faster_whisper_model_name=os.getenv(
+                "POCKETTA_TEST_FASTER_WHISPER_MODEL_NAME"
+            )
+            or configured.faster_whisper_model_name,
+            faster_whisper_compute_type=os.getenv(
+                "POCKETTA_TEST_FASTER_WHISPER_COMPUTE_TYPE"
+            )
+            or configured.faster_whisper_compute_type,
+            ffmpeg_path=configured.ffmpeg_path,
+            ffprobe_path=configured.ffprobe_path,
+        )
+        readiness = faster_whisper_readiness(settings)
+        if not readiness.ready:
+            pytest.skip(readiness.detail)
+        reason = ""
+    else:
+        settings, reason = _local_whisper_settings()
     if settings is None:
         pytest.skip(reason)
-    if not shutil.which(settings.ffmpeg_path) or not shutil.which(settings.ffprobe_path):
+    if not shutil.which(settings.ffmpeg_path) or not shutil.which(
+        settings.ffprobe_path
+    ):
         pytest.skip("FFmpeg and FFprobe are required for recording normalization")
     assert FIXTURE.is_file(), "the short synthetic speech fixture must be checked in"
 
@@ -105,7 +132,7 @@ def test_uploaded_recording_is_transcribed_by_local_whisper(tmp_path: Path) -> N
         )
 
     # Keep the integration local: test the actual upload, FFmpeg normalization,
-    # whisper.cpp decoding, persistence, and API readback without calling a model API.
+    # local Whisper decoding, persistence, and API readback without calling a model API.
     app.state.processor.knowledge.index_source = skip_indexing
     app.state.processor.lm_studio.generate = local_study_pack
 
@@ -139,8 +166,10 @@ def test_uploaded_recording_is_transcribed_by_local_whisper(tmp_path: Path) -> N
         assert transcript["segments"]
         recognized = " ".join(segment["text"] for segment in transcript["segments"])
         normalized = re.sub(r"[^a-z0-9]+", " ", recognized.lower())
-        for word in ("process", "program", "stack", "registers"):
-            assert word in normalized, f"Whisper transcript omitted {word!r}: {recognized!r}"
+        for word in ("process", "program", "stack", "register"):
+            assert word in normalized, (
+                f"Whisper transcript omitted {word!r}: {recognized!r}"
+            )
 
         lecture_dir = settings.lectures_dir / lecture_id
         assert (lecture_dir / "transcript.json").is_file()
