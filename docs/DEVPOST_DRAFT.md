@@ -48,7 +48,7 @@ The per-case DeepEval results and limitations are documented in [the evaluation 
 
 ## Demo outline
 
-Record a 3–10 minute walkthrough showing: upload and processing of course sources; a supported question with an opened citation; an unsupported question and refusal; a mixed assessment and feedback; a saved mastery update and next-step recommendation; and the architecture and evaluation limitations. Show the live configured flow and identify any prepared examples. Add the public or unlisted YouTube link here after recording.
+Record a 3–10 minute walkthrough using the [demo run sheet](DEMO_RUN_SHEET.md). Show source processing, a supported question with an opened citation, an unsupported question and refusal, assessment feedback, a graded mastery update and next-step recommendation, and the architecture and evaluation limits. Identify prepared examples and add the public or unlisted YouTube link here after recording.
 
 ## Submission checklist
 
@@ -60,7 +60,6 @@ Record a 3–10 minute walkthrough showing: upload and processing of course sour
 - [x] Verify recording timestamp navigation in the browser after media metadata loads: the synthetic 61-second video sought to its cited 60-second frame. This checks the local browser/media path, not every codec or browser.
 - [x] Run and publish a framework-based evaluation on the documented synthetic test set; see its coverage and limitations above.
 - [x] Cross-check the numeric evaluation claims against their saved JSON results and the feature claims against the current local implementation.
-- [x] Push the reviewed code state to the public source repository on `codex/track-d-submission-readiness`.
-- [ ] Merge this branch to `main` or make the source link point directly to the branch so reviewers see the reviewed version.
+- [x] Push the reviewed code state to the public source repository's default `main` branch (commit `68e7cb7`).
 - [ ] Review screenshots and confirm the deployed build matches the reviewed local build before submission.
 - [ ] Submit the completed entry through the team's Devpost account.

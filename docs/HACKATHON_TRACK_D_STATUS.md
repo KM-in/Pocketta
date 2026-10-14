@@ -1,6 +1,6 @@
 # Multimodal AI Hackathon 2026 · Track D status
 
-Reviewed on 14 October 2026 against the Track D brief. The reviewed implementation is pushed to the public GitHub repository on `codex/track-d-submission-readiness`; `main` has not yet been updated. The prototype includes model-inferred course topic hierarchy, a new-learner baseline diagnostic, and a saved post-assessment report for weak topics and likely misconceptions. Synthetic multimodal and browser integration checks pass; the separate demo recording remains outside this checklist.
+Reviewed on 14 October 2026 against the Track D brief. The reviewed implementation is available on the public GitHub repository's default `main` branch at commit `68e7cb7`. The prototype includes model-inferred course topic hierarchy, a new-learner baseline diagnostic, and a saved post-assessment report for weak topics and likely misconceptions. Synthetic multimodal and browser integration checks pass; the demo recording remains outstanding.
 
 ## Implemented in the prototype
 
@@ -17,10 +17,9 @@ Reviewed on 14 October 2026 against the Track D brief. The reviewed implementati
 
 ## Remaining before submission (excluding the demo video)
 
-- Merge the reviewed branch into `main` or link directly to the branch in the submission. The implementation is pushed, but the repository's default branch does not yet contain this state.
 - Current quality and adaptation evaluations use small synthetic samples; model-generated items are judged by the same model family, and the saved-learner simulator measures mechanics rather than learning gains. Independent human ratings and a learner pilot are optional additional evidence, not Track D deliverables, and are not claimed here.
-- Choose final screenshots and confirm the deployed build matches the reviewed local implementation, then complete the Devpost entry in [the draft](DEVPOST_DRAFT.md). The repository has no configured deployment target or public application URL, so parity cannot be checked until the team identifies the deployed app. Numeric evaluation claims have been cross-checked against their saved JSON results. The demo URL can be added after the separate video task.
+- Record the required 3–10 minute demo, choose final screenshots, and confirm any deployed build matches the reviewed local implementation before completing the Devpost entry in [the draft](DEVPOST_DRAFT.md). The repository has no configured deployment target or public application URL, so deployment parity remains unverified. Numeric evaluation claims have been cross-checked against their saved JSON results.
 
 ## Submission handoff
 
-The repository is public and the team member names and Devpost usernames are recorded. The reviewed implementation is pushed to `codex/track-d-submission-readiness`; `main` does not yet contain it. Remaining non-video work is confirming the deployed build and screenshots match the reviewed code, reviewing final claims, and completing the Devpost entry. Independent human ratings and a held-out learner pilot could strengthen the evidence but are not required deliverables. The existing metrics are small, synthetic, and partly judged by the generation model; disclose those limitations in the submission.
+The repository is public, the reviewed implementation is on `main` at `68e7cb7`, and team member names and Devpost usernames are recorded. The required demo video and Devpost entry remain to be completed. Confirm any deployed build and screenshots match the reviewed code before submission. Independent human ratings and a held-out learner pilot could strengthen the evidence but are not required deliverables. The existing metrics are small, synthetic, and partly judged by the generation model; disclose those limitations in the submission.
