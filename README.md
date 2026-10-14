@@ -1,39 +1,156 @@
-# PocketTA
+<p align="center">
+  <img src="docs/assets/pocketta-logo.png" alt="PocketTA — Learn from your sources" width="100%" />
+</p>
 
-PocketTA organizes recordings, PDFs, PowerPoint decks, and legacy PPT slides into course workspaces, extracts citable content, generates source-level study packs, and provides a cited course tutor with verified assessments and a persistent topic learner model. React, FastAPI, SQLite, and recording transcription run locally. Select an OpenAI-compatible cloud endpoint (Cerebras by default) for text and vision processing, or LM Studio for local text generation. The application binds to loopback addresses.
+<h1 align="center">Your course. Your evidence. Your next step.</h1>
 
-## What works
+<p align="center">
+  PocketTA turns scattered lectures, slides, and PDFs into a personal TA that shows where answers come from<br />
+  and uses your mistakes to guide what you practice next.
+</p>
 
-- Create and edit courses; collect recordings, PDFs, PPTX slides, and legacy PPT decks within each course.
-- Select multiple sources, search both original passages and routing summaries, and generate verified course study packs organized by topic with coverage reports.
-- Use local FastEmbed embeddings by default; explicitly opt into a billable OpenAI-compatible embedding API only when intended. See [course retrieval](docs/KNOWLEDGE.md).
-- Extract native document text, render previews, and selectively analyse scans or visual pages with Cerebras. Cache rendered pages and vision results across retries.
-- Sample up to 20 video frames per recording, analyse them with configured Cerebras vision, retain uncertainty and timestamps, and include reliable descriptions in course retrieval.
-- Generate source-level study packs with validated content-unit IDs resolved to page, slide, or timestamp citations.
-- Retry/cancel processing, restore interrupted work, and preserve existing recordings under an Imported lectures course.
-- Show measured upload-transfer progress separately from processing progress.
-- Schedule document and recording jobs fairly across courses, with shared provider concurrency and rate-limit cooldowns.
-- Search original course evidence with hybrid keyword/embedding retrieval, exact page/slide/timestamp provenance, stable topics, and stored prerequisite links.
-- Organize indexed excerpts into major topics, subtopics, and key concepts with parent links; start new learners with a short baseline diagnostic and show post-assessment likely misconceptions with cited source links.
-- Ask a course tutor for explanations, examples, comparisons, and explicit understanding checks; verify claim support separately from citation IDs.
-- Restore course chat and saved check grades; open cited PDF pages/slides and seek recording timestamps.
-- Generate and verify MCQ, short-answer, and numerical quizzes across selected course sources; save resumable attempts, cited feedback, topic observations, and adaptive next topics. Mastery estimates use documented Bayesian Knowledge Tracing assumptions and show insufficient evidence until enough reliable answers exist.
-- Convert legacy `.ppt` files to `.pptx` with LibreOffice before extracting and validating slide provenance.
+<p align="center">
+  <strong>Source-cited tutoring · Verified assessments · Adaptive practice</strong><br />
+  React + TypeScript · FastAPI · SQLite · Local Whisper + FastEmbed
+</p>
 
-See [Course tutor and citations](docs/TUTOR.md), [Course knowledge and retrieval](docs/KNOWLEDGE.md), [Model and processing configuration](docs/FOUNDATION.md), [Course setup and API](docs/COURSES.md), and [Track D submission status](docs/HACKATHON_TRACK_D_STATUS.md) for the workflow, evaluation, and release gates.
+<p align="center">
+  <a href="#the-study-workflow">Explore the workflow</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#evaluation">Evaluation</a> ·
+  <a href="#prerequisites">Setup</a> ·
+  <a href="docs/DEMO_RUN_SHEET.md">Demo walkthrough</a>
+</p>
 
-The existing recording workflow also supports:
+---
 
-- Upload WAV, MP3, M4A, or MP4 recordings up to 200 MB.
-- Normalize with FFmpeg and transcribe English locally with whisper.cpp.
-- Mark low-confidence transcript segments and exclude them from confident generated evidence.
-- Build notes, concepts, flashcards, and quizzes with Qwen 3.5 4B in LM Studio.
-- Trace generated items to transcript segments, persist results, export Markdown, and permanently delete data.
-- Record from a microphone or Chromium-based browser tab, cancel local work, correct transcript text, and retry generation without retranscribing.
-- Show coarse persisted progress, stage timings, observed system-memory use, browser connectivity, and local runtime readiness.
-- Start an attributed built-in demo and use the browser print dialog for PDF output.
+## Why PocketTA?
 
-The MVP, framework-based tutor and question-quality evaluations, deterministic multi-session saved-attempt simulation, and a live local-embedding retrieval smoke test are implemented. Submission status and remaining evidence gates are tracked in [the Track D status](docs/HACKATHON_TRACK_D_STATUS.md). Diarisation, accounts, cloud sync, and native packaging are outside the current MVP.
+**“Where was this explained?”** and **“What should I study next?”** belong in the same study workflow.
+
+PocketTA brings course material, cited explanations, assessment feedback, and saved learning history into one workspace. Open the page, slide, or recording timestamp behind an explanation; answer a check; then use the feedback to choose your next practice topic.
+
+> **Evidence stays inspectable.** Tutor claims undergo a separate support check before publication. Ordinary conversation does not increase mastery, and topics with too little graded evidence show **insufficient evidence**.
+
+## The study workflow
+
+| Step | What you can do | What makes it useful |
+|---|---|---|
+| **1. Collect** | Upload PDFs, PPTX, legacy PPT, or lecture recordings; record a microphone or browser tab. | Course workspaces keep sources together, with page, slide, and timestamp provenance. |
+| **2. Explore** | Search selected sources or generate a multi-source study pack. | Hybrid keyword and local semantic retrieval returns original evidence; notes, concepts, and flashcards link back to it. |
+| **3. Ask** | Explain simply, give an example, compare concepts, or test understanding. | Claim-level verification checks cited excerpts; missing support can produce a refusal. |
+| **4. Practice** | Start a baseline diagnostic or build MCQ, short-answer, and numerical quizzes. | Questions undergo separate verification; attempts autosave and feedback cites course evidence. |
+| **5. Adapt** | Review weak topics, likely misconceptions, recent mistakes, and next steps. | Reliable grades update a persistent Bayesian Knowledge Tracing estimate with explicit evidence requirements. |
+
+### Built for actual study sessions
+
+- **Follow the citation:** open exact PDF pages and slides, or seek audio/video after its metadata loads.
+- **Recover your work:** cancel, retry, and restore interrupted processing; resume saved quiz attempts and course chat.
+- **Understand progress:** measured upload transfer is separate from extraction, transcription, indexing, and generation.
+- **Inspect uncertainty:** low-confidence source units are excluded from reliable evidence; uncertain grades do not update mastery.
+- **Choose processing boundaries:** local transcription, storage, and default embeddings; configurable cloud generation/vision or local text through LM Studio.
+- **Keep useful outputs:** correct transcripts, export source study packs as Markdown, download learning reports, and print through the browser.
+
+## Architecture
+
+A course-based modular monolith: one React client, one FastAPI process, SQLite, local assets, and configurable model providers.
+
+```mermaid
+flowchart TB
+    UI["React + TypeScript<br/>Course workspace"] --> API["FastAPI<br/>Course, tutor, quiz & source APIs"]
+
+    subgraph Ingestion["Ingestion & indexing"]
+        direction LR
+        Scheduler["Course-fair scheduler<br/>Progress, retries & cancellation"]
+        Docs["PDF / PPTX / PPT<br/>Text extraction + LibreOffice"]
+        Media["Audio / video<br/>FFmpeg + local Whisper"]
+        Index["Evidence index<br/>Original passages + routing summaries"]
+        Scheduler --> Docs
+        Scheduler --> Media
+        Docs --> Index
+        Media --> Index
+    end
+
+    API --> Scheduler
+    Index --> Store[("SQLite + local files<br/>Sources, locations & versions")]
+    Store --> Retrieval["Hybrid retrieval<br/>FTS5 + local FastEmbed"]
+    Retrieval --> Evidence["Original evidence bundle<br/>Page / slide / timestamp citations"]
+    Evidence --> Tutor["Tutor + study packs<br/>Generate → verify support"]
+    Evidence --> Quiz["Verified quizzes<br/>MCQ, short-answer & numerical"]
+    Tutor --> Checks["Explicit understanding checks"]
+    Checks --> Grades["Reliable graded observations"]
+    Quiz --> Grades
+    Grades --> Learner["Persistent topic model<br/>BKT + next-practice guidance"]
+    Learner --> UI
+    Tutor --> UI
+    Quiz --> UI
+
+    Gateway["Shared model gateway<br/>Provider pacing + usage records"]
+    Gateway --> Cloud["Cerebras / compatible API<br/>Text + vision"]
+    Gateway --> Local["LM Studio<br/>Local text"]
+    Docs -. "Selective vision" .-> Gateway
+    Media -. "Sampled frame analysis" .-> Gateway
+    Index -. "Summary / topic generation" .-> Gateway
+    Tutor -. "Generation / verification" .-> Gateway
+    Quiz -. "Generation / verification / grading" .-> Gateway
+    Checks -. "Grading" .-> Gateway
+
+    classDef interface fill:#0b1427,color:#eef3ff,stroke:#80ead5
+    classDef evidence fill:#eefbf7,color:#102d29,stroke:#38a98f
+    classDef model fill:#f1efff,color:#292045,stroke:#8170bd
+    class UI,API interface
+    class Store,Index,Retrieval,Evidence,Learner evidence
+    class Gateway,Cloud,Local model
+```
+
+**Evidence contract:** summaries route retrieval; original passages support claims. Source membership, versions, locations, and uncertainty are revalidated before answers or grades are saved. Quiz answers and explicit tutor checks update mastery; ordinary chat records activity only.
+
+**Model boundary:** transcription and storage stay local. FastEmbed runs on CPU after a one-time model download. Cloud generation and vision send relevant text/images to the configured endpoint. Paid embedding APIs require explicit opt-in with `EMBEDDING_PROVIDER=api`.
+
+See [the architecture reference](ARCHITECTURE.md), [retrieval](docs/KNOWLEDGE.md), [tutor verification](docs/TUTOR.md), and [multi-source assessment](docs/MULTI_SOURCE.md) for implementation details.
+
+## Evaluation
+
+### DeepEval: tutor quality and retrieval
+
+The saved **DeepEval 4.2.0** run exercises the production tutor on a synthetic operating-systems fixture: **six supported questions and two unsupported questions**, with conversation history cleared between cases. It uses **keyword retrieval** and Cerebras **`qwen-3.8-27b`** for both generation and judging.
+
+| Metric | Recorded result | Scope |
+|---|---:|---|
+| Faithfulness | **1.000** | Six answered supported questions |
+| Answer relevancy | **0.972** | Six answered supported questions |
+| Context precision | **0.972** | Six supported questions |
+| Context recall | **1.000** | Six supported questions |
+| Supported-answer coverage | **6 / 6** | Single full run |
+| Unsupported-question refusals | **2 / 2** | Single full run |
+
+A separate three-repeat evaluation answered **17 / 18 supported attempts (94.4%)**, showing that coverage varies across runs.
+
+> **How to read these results:** this is a small synthetic smoke evaluation. The same model generated and judged answers, so the scores are model-based estimates rather than independent human ratings. They do not establish broad retrieval quality, generated-quiz correctness, or real learning gains. The recorded DeepEval run predates the default local semantic retrieval configuration.
+
+[Evaluation method and reproduction](docs/evaluation/track-d-deepeval.md) · [Raw DeepEval results](docs/evaluation/track-d-deepeval-2026-10-14.json) · [Repeated coverage](docs/evaluation/tutor-coverage.md)
+
+### Additional evidence
+
+| Check | Recorded outcome | Interpretation |
+|---|---|---|
+| Local FastEmbed hybrid retrieval | All **6** expected locations; **2 / 2** unsupported queries rejected. | Same small fixture; semantic candidates contributed to two supported cases, keyword fallback to four. |
+| Generated-question quality | **8 MCQs**; same-model judge: correctness **1.000**, clarity **0.988**, single-best-answer quality **1.000**, evidence support **1.000**. | Follow-up after strengthening the ambiguity verifier; no independent human labels. |
+| Saved learner simulation | **180 saved attempts**; adaptive/fixed simulated accuracy tied at **0.544**; question-ID repetition **0.633 / 0.867**. | Hand-authored items and programmed learners test adaptation mechanics, not learning gains. |
+| Recorded regression gate | **146 backend tests** plus one optional local Whisper integration test; **47 frontend tests** and a successful production build. | Documented gate from 14 October 2026; see commands below to verify your checkout. |
+
+[FastEmbed report](docs/evaluation/live-retrieval-fastembed-2026-10-14.json) · [Question quality](docs/evaluation/question-quality.md) · [Saved learner simulation](docs/evaluation/saved-learner-attempts-2026-10-13.json) · [Native integration checks](docs/evaluation/real-integration-checks.md)
+
+## Technology
+
+| Layer | Tools |
+|---|---|
+| Interface | React, TypeScript, Vite, HTML, CSS |
+| Backend & persistence | Python, FastAPI, Pydantic, SQLite / FTS5 |
+| Retrieval | FastEmbed, NumPy, hybrid keyword/semantic ranking |
+| Media & documents | FFmpeg / FFprobe, whisper.cpp, optional Faster Whisper, PDFium, python-pptx, LibreOffice |
+| Model providers | Cerebras / compatible API, LM Studio; configurable verifier and grader roles |
+| Verification | pytest, Vitest, React Testing Library, DeepEval |
 
 ## Prerequisites
 
@@ -106,7 +223,7 @@ Open the local URL printed by Vite (normally `http://127.0.0.1:5173`). Vite prox
 
 For YouTube or other tab audio, use a Chromium-based browser such as Chrome or Edge. Choose **Record browser tab audio**, select the browser tab in the share picker, and enable **Share tab audio**. Firefox and Safari do not currently expose compatible tab-audio capture for this workflow, so use file upload or microphone recording there.
 
-PocketTA never starts, loads, or downloads models. Failed readiness rows include the local command or LM Studio action needed to fix them.
+PocketTA does not start LM Studio or download generation/transcription models automatically. FastEmbed downloads its embedding model on first use. Failed readiness rows include the local command or LM Studio action needed to fix them.
 
 ## Verify
 
@@ -117,7 +234,7 @@ cd frontend && npm test && npm run build
 
 See [docs/README.md](docs/README.md) for native setup, cross-platform notes, and the offline acceptance checklist.
 
-## Benchmark a prepared machine
+## Local recording benchmarks
 
 For the historical local recording benchmark, with `MODEL_PROVIDER=lm_studio`, FastAPI, and LM Studio running:
 
@@ -136,7 +253,7 @@ The bundled 2.5-minute demo completed a post-hardening local run in 88.4 seconds
 
 ## Privacy and limitations
 
-PocketTA binds to loopback addresses, restricts the LM Studio URL to loopback, ignores proxy environment variables for model calls, and contains no analytics, CDN assets, accounts, or model downloader. In Cerebras mode, source text used for generation and selected page/slide images leave the machine for cloud processing. Course indexing sends reliable source chunks to OpenAI when configured, and semantic queries send query text, even when text generation uses local LM Studio. Originals and extracted results remain under `POCKETTA_DATA_DIR` until deletion. API keys stay on the server; model-run records contain metadata rather than prompts or source content.
+PocketTA binds to loopback addresses, restricts the LM Studio URL to loopback, ignores proxy environment variables for model calls, and contains no analytics, CDN assets, accounts, or model downloader. In Cerebras mode, source text used for generation and selected page/slide images leave the machine for cloud processing. Default FastEmbed indexing and semantic queries run locally after the embedding model is downloaded. If you explicitly select `EMBEDDING_PROVIDER=api`, indexing sends reliable source chunks and routing summaries to that endpoint, and semantic queries send query text, even when text generation uses local LM Studio. Originals and extracted results remain under `POCKETTA_DATA_DIR` until deletion. API keys stay on the server; model-run records contain metadata rather than prompts or source content.
 
 Initial installation requires internet. Cerebras mode also requires internet during generation and vision analysis; local text mode uses prepared LM Studio models. Local execution reduces disclosure risk but is not a formal security proof, and generated material can be incomplete or wrong. Browser tab recording currently depends on Chromium tab-capture behavior and requires the user to explicitly share tab audio. Inspect generated material's cited evidence.
 
@@ -144,6 +261,11 @@ The bundled 2.5-minute demo is an attributed excerpt of MIT OpenCourseWare mater
 
 ## Project documentation
 
+- [Submission status and remaining deliverables](docs/HACKATHON_TRACK_D_STATUS.md)
+- [Course tutor and citations](docs/TUTOR.md)
+- [Course knowledge and retrieval](docs/KNOWLEDGE.md)
+- [Multi-source packs and adaptive assessments](docs/MULTI_SOURCE.md)
+- [Model and processing configuration](docs/FOUNDATION.md)
 - [Architecture](ARCHITECTURE.md)
 - [Operations and offline acceptance](docs/README.md)
 - [Demo runbook](docs/DEMO.md)
