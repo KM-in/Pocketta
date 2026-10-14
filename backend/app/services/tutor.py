@@ -1,4 +1,4 @@
-"""Grounded course tutor. Chat is not a mastery observation; explicit checks are."""
+"""Grounded course tutor with separate conversation activity and mastery evidence."""
 
 from __future__ import annotations
 
@@ -64,6 +64,16 @@ def initialize_tutor(db):
         );
         CREATE INDEX IF NOT EXISTS tutor_course_history
             ON tutor_turns(course_id, learner_id, created_at);
+        CREATE TABLE IF NOT EXISTS tutor_conversation_activity (
+            turn_id TEXT PRIMARY KEY REFERENCES tutor_turns(id) ON DELETE CASCADE,
+            course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+            topics_json TEXT NOT NULL DEFAULT '[]',
+            signal TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS tutor_activity_course
+            ON tutor_conversation_activity(course_id, created_at);
         """)
 
 
@@ -320,6 +330,30 @@ class TutorService:
                     )
                 ),
             )
+            cited_chunks = [item.chunk_id for item in saved_bundle.items]
+            topic_names = []
+            if cited_chunks:
+                marks = ",".join("?" for _ in cited_chunks)
+                topic_names = [
+                    item["name"]
+                    for item in c.execute(
+                        f"""SELECT DISTINCT t.name FROM chunk_topics ct
+                        JOIN topics t ON t.id=ct.topic_id
+                        WHERE ct.chunk_id IN ({marks}) AND t.course_id=?
+                        ORDER BY t.name""",
+                        (*cited_chunks, course_id),
+                    )
+                ]
+            c.execute(
+                """INSERT INTO tutor_conversation_activity
+                   (turn_id,course_id,topics_json,signal,created_at,updated_at)
+                   VALUES(?,?,?,?,?,?)""",
+                (
+                    row["id"], course_id, json.dumps(topic_names),
+                    "awaiting_check" if check else "conversation",
+                    row["created_at"], row["created_at"],
+                ),
+            )
         return self.public(row)
 
     async def answer_check(self, course_id, turn_id, response):
@@ -423,6 +457,10 @@ class TutorService:
                     stable_topic_id,
                     course_id,
                 ),
+            )
+            c.execute(
+                "UPDATE tutor_conversation_activity SET signal='graded_check',updated_at=? WHERE turn_id=? AND course_id=?",
+                (datetime.now(UTC).isoformat(), turn_id, course_id),
             )
         try:
             from .quizzes import QuizService

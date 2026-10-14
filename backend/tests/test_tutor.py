@@ -75,6 +75,14 @@ async def test_grounded_answer_separate_verifier_history_and_no_grade(tutor):
     assert turn["check"] is None and turn["grade"] is None
     restored = TutorService(None, store, service.knowledge).history(course)
     assert restored == [turn]
+    from backend.app.services.quizzes import QuizService
+
+    learning = QuizService(None, store, service.knowledge).learning(course)
+    assert learning["conversation_interaction_count"] == 1
+    assert learning["conversation_activity"]
+    assert all(item["interaction_count"] == 1 for item in learning["conversation_activity"])
+    assert all(item["last_signal"] == "conversation" for item in learning["conversation_activity"])
+    assert learning["topics"] == []  # Discussion activity is not mastery evidence.
     assert service.history(store.create_course("Other", "")["id"]) == []
     with pytest.raises(ValueError, match="no unanswered"):
         await service.answer_check(course, turn["id"], "some answer")
@@ -201,6 +209,10 @@ async def test_explicit_check_private_rubric_persistent_grade_and_one_submission
     assert item.excerpt == grading_input.evidence[0].text
     assert "One quarter" in grading_input.rubric
     assert service.history(course)[0] == answered
+    from backend.app.services.quizzes import QuizService
+
+    activity = QuizService(None, store, service.knowledge).learning(course)["conversation_activity"]
+    assert activity and all(item["last_signal"] == "graded_check" for item in activity)
     with pytest.raises(ValueError, match="no unanswered"):
         await service.answer_check(course, turn["id"], "retry")
 

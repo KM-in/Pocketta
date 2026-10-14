@@ -28,7 +28,7 @@ Students can generate mixed assessments with multiple-choice, short-answer, and 
 
 The web client uses React and TypeScript. A FastAPI service coordinates ingestion, retrieval, tutoring, assessments, and saved learner history in SQLite. PDFs and slide decks preserve page or slide provenance; recordings are transcribed locally and video frames can be indexed with timestamped visual descriptions when a vision provider is configured. Hybrid retrieval combines keyword search with optional embeddings. A model gateway separates provider configuration from the application workflows. Claims and questions go through separate verification steps before they are saved or shown.
 
-The learner model uses transparent MVP BKT parameters rather than parameters fitted to a real student dataset. It excludes uncertain grades and requires repeated reliable evidence before displaying mastery. Ordinary tutor chat is not counted as evidence; explicit understanding checks and graded assessment answers are.
+The learner model tracks every tutor interaction and associates it with topics only when supported course excerpts identify them. Mastery uses transparent MVP BKT parameters rather than parameters fitted to a real student dataset, excludes uncertain grades, and requires repeated reliable evidence before displaying mastery. Only explicit understanding checks and graded assessment answers count as mastery evidence.
 
 ## What is novel
 

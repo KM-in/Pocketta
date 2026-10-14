@@ -248,6 +248,28 @@ class QuizService:
                 known_topics.update(
                     str(value) for value in json.loads(summary["topics_json"])
                 )
+            conversation_rows = [
+                dict(row)
+                for row in c.execute(
+                    """SELECT topics_json,signal,created_at,updated_at
+                    FROM tutor_conversation_activity WHERE course_id=?
+                    ORDER BY created_at DESC""",
+                    (course_id,),
+                )
+            ]
+            conversation_interaction_count = c.execute(
+                "SELECT COUNT(*) FROM tutor_conversation_activity WHERE course_id=?",
+                (course_id,),
+            ).fetchone()[0]
+        conversation_activity = {}
+        for row in conversation_rows:
+            for title in json.loads(row["topics_json"]):
+                activity = conversation_activity.setdefault(
+                    title,
+                    {"topic": title, "interaction_count": 0, "last_signal": row["signal"],
+                     "last_discussed_at": row["created_at"]},
+                )
+                activity["interaction_count"] += 1
         for topic in topics:
             topic["source_ids"] = json.loads(topic.pop("source_ids_json"))
             topic["evidence"] = json.loads(topic.pop("evidence_json"))
@@ -277,6 +299,10 @@ class QuizService:
                 prerequisites.setdefault(topic_name, []).append(prerequisite_name)
         return {
             "topics": profile,
+            "conversation_interaction_count": conversation_interaction_count,
+            "conversation_activity": sorted(
+                conversation_activity.values(), key=lambda item: item["topic"].casefold()
+            ),
             "known_topics": sorted(known_topics),
             "prerequisites": prerequisites,
             "attempts": attempts,
@@ -310,7 +336,7 @@ class QuizService:
         lines = [
             "# Learning history",
             "",
-            "System-generated from saved quiz attempts. SQLite is authoritative.",
+            "System-generated from saved quiz attempts and tutor interactions. SQLite is authoritative.",
             "",
             "## Syllabus progress",
         ]
@@ -341,6 +367,14 @@ class QuizService:
         else:
             lines.append(
                 "No syllabus configured; no syllabus completion percentage is reported."
+            )
+        lines.extend(["", "## Tutor conversation activity"])
+        lines.append(
+            f"- {progress['conversation_interaction_count']} tutor interaction(s) tracked; only graded checks and quizzes contribute mastery observations."
+        )
+        for activity in progress["conversation_activity"]:
+            lines.append(
+                f"- {activity['topic']}: {activity['interaction_count']} interaction(s); latest {activity['last_signal']} at {activity['last_discussed_at']}."
             )
         lines.extend(["", "## Topic performance"])
         for topic in progress["topics"]:
