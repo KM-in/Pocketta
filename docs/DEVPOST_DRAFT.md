@@ -44,7 +44,7 @@ A separate question-quality smoke generated and saved eight MCQs through the pro
 
 A deterministic toy simulation compared adaptive topic/difficulty selection with a fixed medium-difficulty topic rotation over three hand-authored learner profiles and six sessions each. Across 90 simulated questions per strategy, adaptive selection produced **0.567 vs 0.544** response accuracy, **0.204 vs 0.196** mean simulated skill gain, and **0.633 vs 0.867** repeated topic/difficulty-pair rate. A second simulator now runs 180 attempts through PocketTA's saved quiz and grading path using 12 hand-authored source-backed items. It produced tied average simulated accuracy (**0.544** each), mean skill gain **0.211 vs 0.196**, and exact saved-question ID repetition **0.633 vs 0.867**. Both simulations use programmed learner profiles and learning assumptions; neither is evidence of real learning. The second simulation does not evaluate model-generated question quality.
 
-The per-case DeepEval results and limitations are documented in [the evaluation report](evaluation/track-d-deepeval.md), with [three-repeat answer-coverage results](evaluation/tutor-coverage.md). The independent question-review packet and [held-out learner pilot protocol](evaluation/held-out-learner-protocol.md) are ready, but human ratings and participant data still need to be collected.
+The per-case DeepEval results and limitations are documented in [the evaluation report](evaluation/track-d-deepeval.md), with [three-repeat answer-coverage results](evaluation/tutor-coverage.md). No independent human ratings or learner-participant results are included. Question-quality scores are model-judged, and the personalization results come from synthetic learner profiles; neither establishes real-world learning gains.
 
 ## Demo outline
 
@@ -54,14 +54,13 @@ Record a 3–10 minute walkthrough showing: upload and processing of course sour
 
 - [x] Add the Devpost usernames for Kartik Mishra and Kartikeya Srivastava.
 - [ ] Record and review the demo; verify the link works signed out.
-- [x] Backend dependency consistency is clean (`pip check`); all 150 backend tests pass, 47 frontend tests pass, and the production build succeeds.
+- [x] Backend dependency consistency is clean (`pip check`); all 146 backend tests pass, 47 frontend tests pass, and the production build succeeds.
 - [x] Run a live local-embedding retrieval smoke test with zero paid embedding API calls; the report records semantic and keyword-fallback coverage separately.
 - [x] Validate the configured provider flow on synthetic PDF and video material and the real legacy PPT conversion path. The video integration run used a synthetic transcript because no local Whisper runtime/model is installed.
 - [x] Verify recording timestamp navigation in the browser after media metadata loads: the synthetic 61-second video sought to its cited 60-second frame. This checks the local browser/media path, not every codec or browser.
 - [x] Run and publish a framework-based evaluation on the documented synthetic test set; see its coverage and limitations above.
-- [ ] Collect two independent reviews for the 14-item question-quality packet in [the human-review protocol](evaluation/human-question-review.md), then report the labels separately from model-judge scores.
-- [ ] Run the deidentified [held-out learner pilot](evaluation/held-out-learner-protocol.md) and report the results as an exploratory study.
 - [x] Cross-check the numeric evaluation claims against their saved JSON results and the feature claims against the current local implementation.
-- [ ] Publish the reviewed code state to the public source repository; it is committed locally on `codex/track-d-submission-readiness` but has not been pushed.
+- [x] Push the reviewed code state to the public source repository on `codex/track-d-submission-readiness`.
+- [ ] Merge this branch to `main` or make the source link point directly to the branch so reviewers see the reviewed version.
 - [ ] Review screenshots and confirm the deployed build matches the reviewed local build before submission.
 - [ ] Submit the completed entry through the team's Devpost account.
