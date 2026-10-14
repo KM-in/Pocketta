@@ -54,9 +54,9 @@ Record a 3–10 minute walkthrough showing: upload and processing of course sour
 
 - [x] Add the Devpost usernames for Kartik Mishra and Kartikeya Srivastava.
 - [ ] Record and review the demo; verify the link works signed out.
-- [x] Backend dependency consistency is clean (`pip check`); all 146 backend tests pass, 47 frontend tests pass, and the production build succeeds.
+- [x] Backend dependency consistency is clean (`pip check`); 146 backend tests pass in the default setup and the optional local Whisper integration test passes when a model path is provided (147 total); 47 frontend tests pass and the production build succeeds.
 - [x] Run a live local-embedding retrieval smoke test with zero paid embedding API calls; the report records semantic and keyword-fallback coverage separately.
-- [x] Validate the configured provider flow on synthetic PDF and video material and the real legacy PPT conversion path. The video integration run used a synthetic transcript because no local Whisper runtime/model is installed.
+- [x] Validate the configured provider flow on synthetic PDF and video material, the real legacy PPT conversion path, and local Whisper transcription through an uploaded MP4. The speech fixture is locally synthesized; its test validates the local transcription path, not broad speech-recognition accuracy.
 - [x] Verify recording timestamp navigation in the browser after media metadata loads: the synthetic 61-second video sought to its cited 60-second frame. This checks the local browser/media path, not every codec or browser.
 - [x] Run and publish a framework-based evaluation on the documented synthetic test set; see its coverage and limitations above.
 - [x] Cross-check the numeric evaluation claims against their saved JSON results and the feature claims against the current local implementation.

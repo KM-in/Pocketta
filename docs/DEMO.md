@@ -22,7 +22,7 @@ Record a 5–7 minute walkthrough with an English voice track or English subtitl
 
 ## Release gate
 
-- [x] Backend tests, frontend tests, and production build pass (146 backend and 47 frontend tests; production build succeeds).
+- [x] Backend tests, frontend tests, and production build pass (146 backend tests pass by default; the optional local Whisper test also passes with a prepared model, for 147 total; 47 frontend tests; production build succeeds).
 - [ ] Live configured-provider flow works for supported and unsupported questions.
 - [ ] Real LibreOffice conversion works for PPT and PPTX, with matching slide counts.
 - [ ] Video extraction, vision descriptions, retrieval, and timestamp navigation work on the chosen sample.
