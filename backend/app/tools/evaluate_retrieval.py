@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import json
+import os
 import tempfile
 import uuid
 from pathlib import Path
@@ -47,6 +48,16 @@ async def evaluate(live=False):
     with tempfile.TemporaryDirectory(prefix="pocketta-retrieval-") as directory:
         config = Settings(
             pocketta_data_dir=Path(directory),
+            fastembed_cache_dir=(
+                Path(
+                    os.environ.get(
+                        "FASTEMBED_CACHE_DIR",
+                        Path.home() / ".cache" / "pocketta" / "fastembed",
+                    )
+                )
+                if os.environ.get("EMBEDDING_PROVIDER", "fastembed") == "fastembed"
+                else None
+            ),
             knowledge_infer_topics=False,
             **(
                 {}
@@ -55,6 +66,7 @@ async def evaluate(live=False):
                     "_env_file": None,
                     "openai_api_key": "",
                     "embedding_api_key": "",
+                    "embedding_provider": "api",
                     "model_provider": "lm_studio",
                     "lm_studio_model_id": "",
                 }
@@ -62,7 +74,7 @@ async def evaluate(live=False):
         )
         if live and not config.embedding_enabled:
             raise RuntimeError(
-                "Live embeddings were requested, but no embedding API key or local embedding endpoint is configured"
+            "Live embeddings were requested, but no embedding API key or local embedding endpoint is configured"
             )
         db = Database(config.database_path)
         db.initialize()
@@ -90,6 +102,12 @@ async def evaluate(live=False):
                     "source_location_hit": bool(hits) if expected else None,
                     "unsupported_correct": not actual if not expected else None,
                     "mode": bundle.retrieval_mode,
+                    "semantic_passage_matches": bundle.diagnostics[
+                        "passage_semantic_matches"
+                    ],
+                    "keyword_passage_matches": bundle.diagnostics[
+                        "passage_keyword_matches"
+                    ],
                 }
             )
         supported = [r for r in results if r["expected_count"]]
@@ -101,6 +119,9 @@ async def evaluate(live=False):
             / len(supported),
             "unsupported_accuracy": sum(r["unsupported_correct"] for r in unsupported)
             / len(unsupported),
+            "queries_with_semantic_passage_matches": sum(
+                r["semantic_passage_matches"] > 0 for r in results
+            ),
             "results": results,
             "limitations": "Synthetic excerpts and location fixtures; does not measure tutor faithfulness, question quality, or learning outcomes. Offline mode tests keyword retrieval only.",
         }
@@ -111,7 +132,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--live-embeddings",
         action="store_true",
-        help="Send synthetic fixture text and queries to configured OpenAI embeddings",
+        help="Embed synthetic fixture text and queries using the configured embedding provider",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Write the JSON report to this path instead of stdout",
     )
     args = parser.parse_args()
-    print(json.dumps(asyncio.run(evaluate(args.live_embeddings)), indent=2))
+    output = json.dumps(asyncio.run(evaluate(args.live_embeddings)), indent=2) + "\n"
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(output)
+    else:
+        print(output, end="")

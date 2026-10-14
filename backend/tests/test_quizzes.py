@@ -15,6 +15,25 @@ def library(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_assessment_review_falls_back_without_configured_model(library):
+    settings, store, course, knowledge, _, _ = library
+    settings.lm_studio_model_id = ""
+    service = QuizService(settings, store, knowledge)
+
+    report = await service._assessment_report(
+        course["id"],
+        [{"id": "q1", "topic": "Processes", "prompt": "What is a process?", "answer": "A running program", "explanation": "The cited distinction", "chunk_ids": []}],
+        {"q1": "A program file"},
+        {"q1": {"score": 0.0, "uncertain": False, "feedback": "Review the distinction"}},
+        {},
+    )
+
+    assert report["weak_topics"] == ["Processes"]
+    assert report["likely_misconceptions"] == []
+    assert "No assessment-review model is configured" in report["summary"]
+
+
+@pytest.mark.asyncio
 async def test_one_quiz_mixes_sources_and_hides_answers_until_submission(
     library, monkeypatch
 ):

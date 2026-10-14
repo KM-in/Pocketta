@@ -122,6 +122,13 @@ class Database:
             cursor = connection.execute(
                 f"UPDATE lectures SET {', '.join(assignments)} WHERE id = ?", values
             )
+            if cursor.rowcount and connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='sources'"
+            ).fetchone():
+                connection.execute(
+                    "UPDATE sources SET status=?,error=?,progress=COALESCE(?,progress) WHERE id=?",
+                    (status, error, progress, lecture_id),
+                )
             return cursor.rowcount > 0
 
     def save_metrics(self, lecture_id: str, metrics: ProcessingMetrics) -> None:

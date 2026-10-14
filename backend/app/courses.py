@@ -97,7 +97,7 @@ class CourseStore:
                     )
                 current_ids = set(mapping.values())
                 for row in c.execute(
-                    "SELECT id FROM content_units WHERE source_id=?", (id,)
+                    "SELECT id FROM content_units WHERE source_id=? AND image_path IS NULL", (id,)
                 ).fetchall():
                     if row["id"] not in current_ids:
                         c.execute("DELETE FROM content_units WHERE id=?", (row["id"],))

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { QuizWorkspace } from "./QuizWorkspace";
@@ -36,6 +36,34 @@ it("keeps answer keys hidden during an attempt and reveals feedback after gradin
   expect(await screen.findByText("Evidence says A.")).toBeInTheDocument();
   expect(screen.getByText(/Score: 100%/)).toBeInTheDocument();
   await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/submit"), expect.objectContaining({ method: "POST" })));
+});
+
+it("shows the saved assessment review and opens its source citation", async () => {
+  const report = {
+    summary: "Review the distinction between a process and a program.",
+    weak_topics: ["Processes"],
+    likely_misconceptions: [{ title: "Process is a running program", explanation: "The answer suggests the process was confused with the program file.", question_ids: ["q1"], confidence: 0.72 }],
+    next_steps: ["Review the cited lecture, then retry a process question."],
+  };
+  const completed = { ...attempt, status: "completed", answers: { q1: "B" }, grades: { q1: { score: 0, confidence: 1, uncertain: false, feedback: "The source distinguishes a process from a program." } }, assessment_report: report };
+  const completedQuiz = { ...quiz, attempts: [{ id: "attempt", status: "completed", created_at: "now", score: 0 }] };
+  const fetch = vi.fn(async (url: string) => {
+    const path = new URL(url).pathname;
+    let body: unknown = {};
+    if (path.endsWith("/quizzes")) body = [completedQuiz];
+    else if (path.endsWith("/learning")) body = learning;
+    else if (path.endsWith("/syllabus")) body = syllabus;
+    else if (path.endsWith("/quiz-attempts/attempt")) body = completed;
+    else if (path.endsWith("/quizzes/quiz")) body = completedQuiz;
+    return { ok: true, status: 200, json: async () => body };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(<MemoryRouter><QuizWorkspace courseId="course" sourceIds={[]} sources={[]} view="practice" /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole("button", { name: /Review attempt 1/ }));
+  expect(await screen.findByRole("region", { name: "Post-assessment report" })).toBeInTheDocument();
+  expect(screen.getByText("Process is a running program")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Post-assessment report" })).toHaveTextContent(/Topics to review: Processes/);
+  expect(within(screen.getByRole("region", { name: "Post-assessment report" })).getByRole("link", { name: "Lecture · page 10" })).toHaveAttribute("href", "/courses/course/sources/s1?citation=unit&version=1");
 });
 
 it("separates the progress section and preserves backend learning observations", async () => {

@@ -6,7 +6,8 @@ import type { TutorEvidence } from "./CourseTutor";
 import { citationHref, citationLabel } from "./CourseTutor";
 
 interface Question { id: string; kind: "mcq" | "short_answer" | "numerical"; topic: string; difficulty?: string; prompt: string; options: string[]; chunk_ids: string[]; citations?: TutorEvidence[]; answer?: string; explanation?: string; numeric_answer?: number; tolerance?: number; unit?: string }
-interface Attempt { id: string; quiz_id: string; status: string; answers: Record<string, string>; grades: Record<string, { score: number; confidence: number; uncertain: boolean; feedback: string }>; grade_count?: number; question_count?: number; questions: Question[] }
+interface AssessmentReport { summary: string; weak_topics: string[]; likely_misconceptions: { title: string; explanation: string; question_ids: string[]; confidence: number }[]; next_steps: string[] }
+interface Attempt { id: string; quiz_id: string; status: string; answers: Record<string, string>; grades: Record<string, { score: number; confidence: number; uncertain: boolean; feedback: string }>; assessment_report?: AssessmentReport | null; grade_count?: number; question_count?: number; questions: Question[] }
 interface Quiz { id: string; title: string; status: string; stale: boolean; pack_id: string | null; instructions: Record<string, unknown>; questions: Question[]; represented_topics: string[]; represented_sources: { id: string; name: string }[]; attempts: { id: string; status: string; created_at: string; score?: number | null }[]; warnings: string[] }
 interface Learning { topics: { topic_id: string; title: string; average: number | null; mastery_probability?: number | null; observation_count?: number; recent_mistakes?: number; last_practiced_at?: string | null; mastered: boolean; weak: boolean; observations: { uncertain: boolean; score: number; response: string; answer: string; explanation: string; feedback: string }[] }[]; known_topics: string[]; prerequisites?: Record<string, string[]>; attempts: { quiz_title: string; status: string; score: number | null; created_at: string }[]; syllabus_progress: { has_syllabus: boolean; material_available: number; studied: number; assessed: number; mastered: number; total: number }; syllabus_topics: { id: string; title: string; material_available: boolean; source_ids: string[]; studied_at: string | null }[] }
 interface Syllabus { markdown: string; active: boolean; topics: { id: string; title: string; material_available: boolean; source_ids: string[]; evidence: TutorEvidence[]; studied_at: string | null; assessed_at: string | null; mastered_at: string | null }[] }
@@ -50,6 +51,17 @@ export function QuizWorkspace({ courseId, sourceIds, sources, view = "all" }: { 
     if (!sourceIds.length) { setError("Select at least one source first."); return; }
     await action(async () => { const quiz = await request<Quiz>(`/courses/${courseId}/quizzes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_ids: sourceIds, question_count: count, mcq_count: mcqCount, numerical_count: numericalCount, difficulty, desired_topics: desired.split(",").map(x => x.trim()).filter(Boolean), excluded_topics: excluded.split(",").map(x => x.trim()).filter(Boolean), instructions }) }); setSelectedQuiz(quiz); await load(); });
   }
+  async function startDiagnostic() {
+    if (!sourceIds.length) { setError("Select at least one processed course source to start a diagnostic."); return; }
+    await action(async () => {
+      const quiz = await request<Quiz>(`/courses/${courseId}/quizzes`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source_ids: sourceIds, question_count: 6, mcq_count: 3, numerical_count: 0, difficulty: "adaptive", instructions: "Baseline diagnostic for a new learner. Sample the available course topics evenly and use a mix of recognition and short explanation questions. Do not assume prior knowledge." }),
+      });
+      const attempt = await request<Attempt>(`/courses/${courseId}/quizzes/${quiz.id}/attempts`, post());
+      setSelectedQuiz(quiz); setActive(attempt); setAnswers(attempt.answers ?? {}); await load();
+    });
+  }
   async function start(quiz: Quiz) {
     await action(async () => { const inProgress = quiz.attempts?.find(a => a.status === "in_progress" || a.status === "grading"); const attempt = inProgress ? await request<Attempt>(`/courses/${courseId}/quiz-attempts/${inProgress.id}`) : await request<Attempt>(`/courses/${courseId}/quizzes/${quiz.id}/attempts`, post()); setSelectedQuiz(quiz); setActive(attempt); setAnswers(attempt.answers ?? {}); });
   }
@@ -90,6 +102,15 @@ export function QuizWorkspace({ courseId, sourceIds, sources, view = "all" }: { 
         {grade && <div role="status"><p>{grade.uncertain ? "Uncertain grade · review the source evidence. " : ""}Score: {Math.round(grade.score * 100)}% · {grade.feedback}</p><p><strong>Answer:</strong> {q.kind === "numerical" ? `${q.numeric_answer}${q.unit ? ` ${q.unit}` : ""} (±${q.tolerance})` : selectedQuiz?.questions.find(item => item.id === q.id)?.answer}</p><p>{selectedQuiz?.questions.find(item => item.id === q.id)?.explanation}</p></div>}
         <div>{q.citations?.map(c => <Link className="text-button" key={c.chunk_id} to={citationHref(courseId, c)}>{citationLabel(c)}</Link>)}</div>
       </section>; })}
+      {active.status === "completed" && active.assessment_report && <section className="content-card assessment-report" aria-label="Post-assessment report">
+        <p className="eyebrow">Assessment review</p><h4>What to work on next</h4><p>{active.assessment_report.summary}</p>
+        {active.assessment_report.weak_topics.length > 0 && <p><strong>Topics to review:</strong> {active.assessment_report.weak_topics.join(", ")}</p>}
+        {active.assessment_report.likely_misconceptions.map((item, index) => <article className="learning-observation" key={`${item.title}-${index}`}>
+          <strong>{item.title}</strong><p>{item.explanation}</p><p className="muted">Likely pattern · {Math.round(item.confidence * 100)}% confidence</p>
+          <div>{item.question_ids.flatMap(id => active.questions.find(question => question.id === id)?.citations ?? []).map((citation, citationIndex) => <Link className="text-button" key={`${citation.chunk_id}-${citationIndex}`} to={citationHref(courseId, citation)}>{citationLabel(citation)}</Link>)}</div>
+        </article>)}
+        {active.assessment_report.next_steps.length > 0 && <><h5>Suggested next steps</h5><ul>{active.assessment_report.next_steps.map((step, index) => <li key={`${step}-${index}`}>{step}</li>)}</ul></>}
+      </section>}
       {inAttempt && <button className="button" disabled={busy} onClick={() => void submit()}>{active.status === "grading" ? "Retry unfinished grading" : "Submit quiz"}</button>}
     </article>}
     <details className="content-card" id="quiz-library" open><summary>Quiz library · {quizzes.length}</summary>
@@ -105,6 +126,11 @@ export function QuizWorkspace({ courseId, sourceIds, sources, view = "all" }: { 
       <p>{learning?.syllabus_progress.has_syllabus ? `Syllabus: material ${learning.syllabus_progress.material_available}/${learning.syllabus_progress.total}, studied ${learning.syllabus_progress.studied}/${learning.syllabus_progress.total}, assessed ${learning.syllabus_progress.assessed}/${learning.syllabus_progress.total}, mastered ${learning.syllabus_progress.mastered}/${learning.syllabus_progress.total}.` : "No syllabus set. Progress below covers known course topics without a syllabus completion percentage."}</p>
       {learning?.syllabus_progress.has_syllabus && <div className="learning-metrics">{([ ["Material available", learning.syllabus_progress.material_available], ["Studied", learning.syllabus_progress.studied], ["Assessed", learning.syllabus_progress.assessed], ["Mastered", learning.syllabus_progress.mastered] ] as [string, number][]).map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}<small> / {learning.syllabus_progress.total}</small></strong><progress aria-label={label} value={value} max={Math.max(1, learning.syllabus_progress.total)} /></div>)}</div>}
       {learning && <article className="content-card"><h3>Recommended next step</h3><p>{recommendation(learning)}</p>{recommendationTopic(learning) && <button className="button secondary" onClick={() => { setDesired(recommendationTopic(learning)!); document.getElementById("quiz-generator")?.setAttribute("open", ""); document.getElementById("quiz-generator")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>Practice this topic</button>}</article>}
+      {learning && learning.known_topics.length > 0 && learning.topics.every(topic => !topic.observation_count) && <article className="content-card">
+        <h3>Start with a baseline</h3><p>There are no graded topic observations yet. A short source-based diagnostic will sample this course and start your learning history.</p>
+        <button className="button secondary" disabled={busy || !sourceIds.length} onClick={() => void startDiagnostic()}>{busy ? "Preparing diagnostic…" : "Take baseline diagnostic"}</button>
+        {!sourceIds.length && <p className="muted">Select one or more processed sources in the Sources panel first.</p>}
+      </article>}
       <h3>Recent assessment history</h3>{learning?.attempts?.slice(0, 5).map((attempt, index) => <p key={`${attempt.quiz_title}-${attempt.created_at}-${index}`}>{attempt.quiz_title} · {attempt.status}{attempt.score == null ? "" : ` · ${Math.round(attempt.score * 100)}%`} · {new Date(attempt.created_at).toLocaleDateString()}</p>)}{learning?.attempts?.length === 0 && <p>No completed assessment attempts yet.</p>}
       {learning && !learning.known_topics.length && !learning.topics.length && <EmptyState title="Understanding grows with practice">Complete a quiz or a tutor understanding check. Your topic observations will appear here.</EmptyState>}
       <div className="topic-list">{learning && [...new Set([...learning.known_topics, ...learning.topics.map(t => t.title)])].map(title => { const t = learning.topics.find(item => item.title === title); return <article className="topic-row" key={title}><div><strong>{title}</strong><p>{learningLabel(t)}</p></div><span className={`status ${t?.mastered ? "completed" : t?.weak ? "failed" : ""}`}>{t?.mastered ? "Mastered" : t?.weak ? "Review recommended" : t ? "In progress" : "Not yet assessed"}</span>{t?.observations?.length ? <details><summary>Review {t.observations.length} observations</summary>{t.observations.map((observation, index) => <div className="learning-observation" key={index}><p>{observation.uncertain ? "Uncertain grade — review the evidence" : `Score: ${Math.round(observation.score * 100)}%`}</p><p>Your answer: {observation.response}</p><p>{observation.feedback}</p>{observation.answer && <p>Expected answer: {observation.answer}</p>}{observation.explanation && <p>{observation.explanation}</p>}</div>)}</details> : null}</article>; })}</div>

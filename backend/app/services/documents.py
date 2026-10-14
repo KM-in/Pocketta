@@ -44,7 +44,7 @@ def render_pdf_page(path: Path, page_index: int, output: Path):
                 paths = 0
                 for obj in page.get_objects():
                     if obj.type == pdfium.raw.FPDF_PAGEOBJ_IMAGE:
-                        left, bottom, right, top = obj.get_bounds()
+                        left, bottom, right, top = obj.get_pos()
                         coverage += max(0, right - left) * max(0, top - bottom) / area
                     elif obj.type == pdfium.raw.FPDF_PAGEOBJ_PATH:
                         paths += 1

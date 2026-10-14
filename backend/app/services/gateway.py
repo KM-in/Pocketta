@@ -58,6 +58,8 @@ def strict_schema(schema):
 class ModelGateway(GenerationService):
     """Provider-neutral orchestration; adapters own provider configuration."""
 
+    _fastembed_models = {}
+
     def __init__(
         self, settings, database, source_id=None, coordinator=None, course_id=None
     ):
@@ -148,6 +150,8 @@ class ModelGateway(GenerationService):
             return []
         if any(not isinstance(t, str) or not t.strip() for t in texts):
             raise ValueError("Embedding inputs must be nonblank strings")
+        if self.settings.embedding_provider == "fastembed":
+            return await asyncio.to_thread(self._embed_fastembed, texts)
         adapter = ProviderAdapter(
             "openai"
             if self.settings.embedding_base_url == "https://api.openai.com/v1"
@@ -196,6 +200,38 @@ class ModelGateway(GenerationService):
         except (KeyError, TypeError, ValueError, IndexError) as error:
             self._validation_outcome("invalid")
             raise ValueError("Invalid embedding response") from error
+
+    def _embed_fastembed(self, texts: list[str]) -> list[list[float]]:
+        model_name = self.settings.fastembed_model
+        model = self._fastembed_models.get(model_name)
+        if model is None:
+            try:
+                from fastembed import TextEmbedding
+            except ImportError as error:
+                raise RuntimeError(
+                    "Local embeddings require the FastEmbed dependency from backend/requirements.txt"
+                ) from error
+            cache_dir = str(self.settings.fastembed_cache_path)
+            model = TextEmbedding(model_name=model_name, cache_dir=cache_dir)
+            self._fastembed_models[model_name] = model
+        inputs = [
+            value if value.startswith(("query: ", "passage: ")) else f"passage: {value}"
+            for value in texts
+        ]
+        vectors = [
+            vector.tolist() if hasattr(vector, "tolist") else list(vector)
+            for vector in model.embed(inputs)
+        ]
+        if len(vectors) != len(texts) or not vectors:
+            raise ValueError("FastEmbed returned an invalid vector count")
+        dimension = len(vectors[0])
+        if not dimension or any(
+            len(vector) != dimension
+            or any(not math.isfinite(value) for value in vector)
+            for vector in vectors
+        ):
+            raise ValueError("FastEmbed returned invalid vectors")
+        return vectors
 
     async def analyse_image(self, image_path: Path, prompt: str):
         if self.settings.model_provider != "cerebras":
