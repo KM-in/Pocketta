@@ -196,13 +196,15 @@ For NVIDIA CUDA transcription, install the optional Python dependency while onli
 .venv/bin/python -m pip install -r backend/requirements-faster-whisper.txt
 ```
 
-Install the NVIDIA CUDA libraries required by Faster Whisper for your OS, then prepare the default `turbo` model while online:
+On Windows, the optional requirements include CUDA 12/cuDNN 9 runtime wheels. PocketTA registers their DLL directories automatically; a CUDA 13 toolkit alone does not supply these libraries. On Linux, install the NVIDIA CUDA 12/cuDNN 9 libraries and configure `LD_LIBRARY_PATH` before starting Python. The optional requirements also keep PyAV below 19 for compatibility with Faster Whisper's audio decoder. Then prepare the default `turbo` model while online:
 
 ```bash
 .venv/bin/python -m backend.app.tools.prepare_faster_whisper
 ```
 
 Recording transcription remains local in either model mode. With `TRANSCRIPTION_BACKEND=auto`, PocketTA uses Faster Whisper when CUDA and the prepared model are ready, and otherwise falls back to whisper.cpp.
+
+Set `FASTER_WHISPER_MODEL_PATH` to a local CTranslate2 model directory containing `config.json`, `model.bin`, and `tokenizer.json`, or prepare `FASTER_WHISPER_MODEL_NAME` in the Hugging Face cache. Recording jobs load only local files. VAD is enabled by default for batched inference; setting `FASTER_WHISPER_VAD_FILTER=false` uses standard inference so recordings longer than 30 seconds still work. Faster Whisper jobs are serialized to limit GPU memory use, and the model is released after each job. Restart the backend after installing dependencies or changing configuration.
 
 ## Run
 

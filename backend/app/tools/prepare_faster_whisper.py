@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 
 from ..config import Settings
+from ..services.whisper import _prepare_windows_cuda_runtime
 
 
 def main() -> int:
@@ -25,12 +26,13 @@ def main() -> int:
     print(f"Preparing Faster Whisper model: {model_ref}")
     print("This command may download the model if it is not already available locally.")
     try:
+        _prepare_windows_cuda_runtime()
         WhisperModel(
             model_ref,
             device="cuda",
             compute_type=settings.faster_whisper_compute_type,
         )
-    except Exception as error:
+    except (RuntimeError, OSError, ValueError) as error:
         print(
             "Could not prepare Faster Whisper for CUDA.\n"
             f"Error: {error}\n"
