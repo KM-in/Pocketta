@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     cerebras_vision_model: str = "qwen-3.8-27b"
     openai_api_key: str = ""
     openai_embedding_model: str = "text-embedding-3-small"
+    # Local inference is the default so merely setting an API key never incurs embedding charges.
+    embedding_provider: Literal["api", "fastembed"] = "fastembed"
+    fastembed_model: str = "BAAI/bge-small-en-v1.5"
+    fastembed_min_similarity: float = Field(default=0.80, ge=0, le=1)
+    fastembed_cache_dir: Path | None = None
     embedding_base_url: str = "https://api.openai.com/v1"
     embedding_api_key: str | None = None
     embedding_model: str | None = None
@@ -33,6 +38,8 @@ class Settings(BaseSettings):
 
     @property
     def effective_embedding_model(self):
+        if self.embedding_provider == "fastembed":
+            return self.fastembed_model
         return self.embedding_model or self.openai_embedding_model
 
     @property
@@ -53,16 +60,24 @@ class Settings(BaseSettings):
 
     @property
     def embedding_enabled(self):
+        if self.embedding_provider == "fastembed":
+            return True
         return bool(self.effective_embedding_key) or self.embedding_is_local
 
     @property
     def embedding_identity(self):
+        if self.embedding_provider == "fastembed":
+            return f"fastembed|{self.fastembed_model}"
         model = self.effective_embedding_model
         return (
             model
             if self.embedding_base_url == "https://api.openai.com/v1"
             else f"{self.embedding_base_url}|{model}"
         )
+
+    @property
+    def fastembed_cache_path(self) -> Path:
+        return self.fastembed_cache_dir or (self.pocketta_data_dir / "fastembed")
 
     retrieval_chunk_chars: int = Field(default=1200, ge=200, le=6000)
     retrieval_chunk_overlap_chars: int = Field(default=160, ge=0)

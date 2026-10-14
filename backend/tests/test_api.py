@@ -70,6 +70,8 @@ def test_health_reports_faster_whisper_without_requiring_it_in_auto(
             whisper_cli_path=whisper_cli,
             whisper_model_path=whisper_model,
             lm_studio_model_id="local-qwen",
+            embedding_provider="fastembed",
+            openai_api_key="present-but-unused",
         )
     )
 
@@ -81,6 +83,8 @@ def test_health_reports_faster_whisper_without_requiring_it_in_auto(
     assert body["ready"] is True
     assert body["components"]["faster_whisper"]["ready"] is False
     assert "selected=whisper_cpp" in body["components"]["transcription_backend"]["detail"]
+    assert "provider=fastembed" in body["components"]["embeddings"]["detail"]
+    assert "no per-request API charges" in body["components"]["embeddings"]["detail"]
 
 
 def test_health_failure_has_actionable_remediation(tmp_path: Path) -> None:

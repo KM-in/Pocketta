@@ -22,11 +22,12 @@ Record a 5–7 minute walkthrough with an English voice track or English subtitl
 
 ## Release gate
 
-- [x] Backend tests, frontend tests, and production build pass (141 backend and 46 frontend tests; production build succeeds).
+- [x] Backend tests, frontend tests, and production build pass (150 backend and 47 frontend tests; production build succeeds).
 - [ ] Live configured-provider flow works for supported and unsupported questions.
 - [ ] Real LibreOffice conversion works for PPT and PPTX, with matching slide counts.
 - [ ] Video extraction, vision descriptions, retrieval, and timestamp navigation work on the chosen sample.
 - [ ] Assessment, retry-safe grading, BKT updates, and returning-learner behavior are shown from saved data.
+- [ ] New-learner baseline diagnostic, inferred course hierarchy, and cited post-assessment misconception report are reviewed in the full app.
 - [ ] Evaluation methods, fixture, provider/model versions, results, and limitations are published with the project.
 - [ ] No private media, weights, `.env`, database, or machine-specific output is staged.
 - [ ] YouTube link is public or unlisted and accessible signed out; Devpost links and team accounts are complete.

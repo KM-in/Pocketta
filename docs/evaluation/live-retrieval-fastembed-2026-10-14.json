@@ -1,0 +1,106 @@
+{
+  "fixture": "synthetic-os-course-v1",
+  "live_embeddings_requested": true,
+  "source_location_hit_rate": 1.0,
+  "unsupported_accuracy": 1.0,
+  "queries_with_semantic_passage_matches": 2,
+  "results": [
+    {
+      "query": "What is a process address space?",
+      "expected_count": 1,
+      "returned_count": 3,
+      "precision": 0.3333333333333333,
+      "recall": 1.0,
+      "source_location_hit": true,
+      "unsupported_correct": null,
+      "mode": "keyword",
+      "semantic_passage_matches": 0,
+      "keyword_passage_matches": 5
+    },
+    {
+      "query": "What do threads share?",
+      "expected_count": 1,
+      "returned_count": 2,
+      "precision": 0.5,
+      "recall": 1.0,
+      "source_location_hit": true,
+      "unsupported_correct": null,
+      "mode": "hybrid",
+      "semantic_passage_matches": 1,
+      "keyword_passage_matches": 2
+    },
+    {
+      "query": "List the necessary deadlock conditions",
+      "expected_count": 1,
+      "returned_count": 2,
+      "precision": 0.5,
+      "recall": 1.0,
+      "source_location_hit": true,
+      "unsupported_correct": null,
+      "mode": "keyword",
+      "semantic_passage_matches": 0,
+      "keyword_passage_matches": 2
+    },
+    {
+      "query": "Explain round robin time quantum",
+      "expected_count": 1,
+      "returned_count": 2,
+      "precision": 0.5,
+      "recall": 1.0,
+      "source_location_hit": true,
+      "unsupported_correct": null,
+      "mode": "hybrid",
+      "semantic_passage_matches": 1,
+      "keyword_passage_matches": 2
+    },
+    {
+      "query": "What causes the convoy effect?",
+      "expected_count": 1,
+      "returned_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "source_location_hit": true,
+      "unsupported_correct": null,
+      "mode": "keyword",
+      "semantic_passage_matches": 0,
+      "keyword_passage_matches": 1
+    },
+    {
+      "query": "How does a mutex protect a critical section?",
+      "expected_count": 1,
+      "returned_count": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "source_location_hit": true,
+      "unsupported_correct": null,
+      "mode": "keyword",
+      "semantic_passage_matches": 0,
+      "keyword_passage_matches": 1
+    },
+    {
+      "query": "Explain photosynthesis in chloroplasts",
+      "expected_count": 0,
+      "returned_count": 0,
+      "precision": null,
+      "recall": null,
+      "source_location_hit": null,
+      "unsupported_correct": true,
+      "mode": "keyword",
+      "semantic_passage_matches": 0,
+      "keyword_passage_matches": 0
+    },
+    {
+      "query": "Explain teleportation throughput",
+      "expected_count": 0,
+      "returned_count": 0,
+      "precision": null,
+      "recall": null,
+      "source_location_hit": null,
+      "unsupported_correct": true,
+      "mode": "keyword",
+      "semantic_passage_matches": 0,
+      "keyword_passage_matches": 0
+    }
+  ],
+  "limitations": "Synthetic excerpts and location fixtures; does not measure tutor faithfulness, question quality, or learning outcomes. Offline mode tests keyword retrieval only."
+}

@@ -10,6 +10,20 @@ These checks use disposable synthetic files. No course documents or user media w
 
 `backend/tests/test_media_integration.py` creates a 65-second synthetic 1-fps video with FFmpeg and checks real frame files and dimensions. The first run exposed a seek at 64.5 seconds, where a 1-fps recording has no frame. Sampling now leaves one second at the end; the integration check returns frames at 0 and 64,000 ms, both 1280×720. The local FFmpeg runtime is 8.1.2.
 
-## Still unverified
+## Browser video seek
 
-These checks do not call the configured vision model, test frame-description retrieval, or open the player in a browser to verify seeking after metadata loads. A separate text tutor/judge DeepEval run later succeeded, but that does not verify video-frame vision or browser seeking; those multimodal checks remain open.
+On the synthetic 61-second recording below, the full source page loaded the cited 60-second frame after the media element's metadata became available. In the browser, the video reported `readyState=4`, `duration=61`, and `currentTime=60`. This verifies end-to-end timestamp navigation for this local synthetic recording; it does not cover every browser/codec combination.
+
+## Synthetic live-provider end-to-end check · 14 October 2026
+
+After fixing PDFium image geometry to use the installed library's `get_pos()` API, a one-page synthetic raster diagram was uploaded through the FastAPI application in a temporary data directory. The configured Cerebras text/vision provider transcribed the diagram labels and explanatory text; checks found both “ready queue” and “quantum.” Indexing produced five hierarchy entries (one major topic, two subtopics, and two key concepts), and a natural-language retrieval query returned a cited source item. No existing course material was used.
+
+The same temporary synthetic course generated a two-question MCQ quiz. Both answers were intentionally wrong; submission completed and persisted an assessment report with two weak topics, two likely-misconception entries, and question IDs that resolved to source citations when the report was reopened. This confirms live provider and API behavior on synthetic material. It does not verify video transcription/frame analysis, browser timestamp seeking, or visual presentation in a browser.
+
+## Synthetic lecture-video frame and citation check · 14 October 2026
+
+A generated 61-second MP4 with a static educational diagram passed through the recording API and FFmpeg frame sampler. For this isolated check, the transcription method returned a hand-written synthetic transcript because this checkout has neither the configured Whisper binary/model nor Faster Whisper installed. The normal frame-description, topic indexing, and source retrieval code called the configured Cerebras provider. The completed course source retained both frame units after reindexing; retrieval returned frame citations at 0 and 60 seconds, and the frame descriptions included “ready queue.”
+
+This run exposed and fixed two recording integration bugs: `processor.py` used `json.dumps` without importing `json`, and transcript synchronization deleted visual frame units before knowledge indexing. It also exposed that recording status updates changed the legacy lecture row but left the course source row stuck at “queued”; status and progress now stay synchronized.
+
+The same synthetic recording was then opened in the browser at its cited 60-second frame. After metadata loaded, the video element reached `readyState=4`, reported a 61-second duration, and had `currentTime=60`; the 0-second and 60-second frame citations remain available from the source index.

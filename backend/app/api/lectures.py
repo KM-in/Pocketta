@@ -104,8 +104,16 @@ async def health(request: Request) -> HealthResponse:
     )
     components["embeddings"] = HealthComponent(
         ready=settings.embedding_enabled,
-        detail=f"Embedding model={settings.effective_embedding_model}; configuration only, not a connectivity check",
-        remediation="Configure EMBEDDING_BASE_URL, EMBEDDING_MODEL and EMBEDDING_API_KEY on the server.",
+        detail=(
+            f"provider=fastembed; model={settings.fastembed_model}; local CPU inference; no per-request API charges"
+            if settings.embedding_provider == "fastembed"
+            else f"provider=api; model={settings.effective_embedding_model}; embedding requests may incur provider charges"
+        ),
+        remediation=(
+            "Install backend/requirements.txt and allow the model weights to download on first use."
+            if settings.embedding_provider == "fastembed"
+            else "Configure EMBEDDING_BASE_URL, EMBEDDING_MODEL and EMBEDDING_API_KEY on the server. API embeddings are explicitly enabled and may incur charges."
+        ),
     )
     for role, model in (
         ("verifier", settings.verifier_model),
