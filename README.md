@@ -151,6 +151,7 @@ A separate three-repeat evaluation answered **17 / 18 supported attempts (94.4%)
 | Media & documents | FFmpeg / FFprobe, whisper.cpp, optional Faster Whisper, PDFium, python-pptx, LibreOffice |
 | Model providers | Cerebras / compatible API, LM Studio; configurable verifier and grader roles |
 | Verification | pytest, Vitest, React Testing Library, DeepEval |
+| Development assistance | OpenAI Codex |
 
 ## Prerequisites
 
